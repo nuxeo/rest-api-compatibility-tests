@@ -1,0 +1,16 @@
+{
+  "entity-type": "user",
+  "extendedGroups": [],
+  "id": "joe",
+  "isAdministrator": false,
+  "isAnonymous": false,
+  "properties": {
+    "company": "Nuxeo",
+    "email": "devnull@nuxeo.com",
+    "firstName": "Joe",
+    "groups": [],
+    "lastName": "DiMaggio",
+    "tenantId": null,
+    "username": "joe"
+  }
+}
