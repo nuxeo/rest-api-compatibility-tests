@@ -1,0 +1,14 @@
+{
+  "extends": ["airbnb-base", "plugin:prettier/recommended"],
+  "rules": {
+    "no-underscore-dangle": "off",
+    "no-use-before-define": "off",
+    "import/no-extraneous-dependencies": ["off", { "devDependencies": false }]
+  },
+  "env": {
+    "jest": true
+  },
+  "globals": {
+    "t": true
+  }
+}
