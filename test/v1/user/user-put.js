@@ -69,12 +69,35 @@ t(
   },
 );
 
-t('PUT /user/USER_ID > update unexisting user', async () => {
-  const { statusCode } = await request.put('/user/john', {
-    body: {
-      ...DEFAULT_ENTITY,
-      id: 'john',
-    },
-  });
-  expect(statusCode).toBe(404);
-});
+t(
+  'PUT /user/USER_ID > update unexisting user (wrong path parameter)',
+  async () => {
+    const { statusCode } = await request.put('/user/john', {
+      body: DEFAULT_ENTITY,
+    });
+    expect(statusCode).toBe(404);
+  },
+);
+
+t(
+  'PUT /user/USER_ID > update unexisting user (missing id property)',
+  async () => {
+    const { statusCode } = await request.put('/user/jack', {
+      body: DEFAULT_ENTITY,
+    });
+    expect(statusCode).toBe(500);
+  },
+);
+
+t(
+  'PUT /user/USER_ID > update unexisting user (wrong id property)',
+  async () => {
+    const { statusCode } = await request.put('/user/jack', {
+      body: {
+        ...DEFAULT_ENTITY,
+        id: 'john',
+      },
+    });
+    expect(statusCode).toBe(500);
+  },
+);
