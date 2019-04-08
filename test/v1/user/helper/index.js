@@ -15,7 +15,26 @@ const JACK_ENTITY = {
   },
 };
 
+const USER_PROFILE_SCHEMA = 'userprofile';
+const USER_PROFILE_ENTITY = {
+  'entity-type': 'document',
+  name: 'testUserProfile',
+  type: 'UserProfile',
+  properties: {
+    [`${USER_PROFILE_SCHEMA}:birthdate`]: '1980-12-20',
+    [`${USER_PROFILE_SCHEMA}:gender`]: false,
+    [`${USER_PROFILE_SCHEMA}:locale`]: 'en',
+    [`${USER_PROFILE_SCHEMA}:phonenumber`]: '06 78 65 98 45',
+  },
+};
+
+const USER_PROFILE_ENRICHER = {
+  'enrichers.user': 'userprofile',
+};
+
 module.exports = {
   DEFAULT_ENTITY,
   JACK_ENTITY,
+  USER_PROFILE_ENRICHER,
+  USER_PROFILE_ENTITY,
 };

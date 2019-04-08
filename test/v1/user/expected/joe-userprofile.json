@@ -1,0 +1,25 @@
+{
+  "contextParameters": {
+    "userprofile": {
+      "avatar": null,
+      "birthdate": "1980-12-20T00:00:00.000Z",
+      "gender": false,
+      "locale": "en",
+      "phonenumber": "06 78 65 98 45"
+    }
+  },
+  "entity-type": "user",
+  "extendedGroups": [],
+  "id": "joe",
+  "isAdministrator": false,
+  "isAnonymous": false,
+  "properties": {
+    "company": "Nuxeo",
+    "email": "devnull@nuxeo.com",
+    "firstName": "Joe",
+    "groups": [],
+    "lastName": "DiMaggio",
+    "tenantId": null,
+    "username": "joe"
+  }
+}
