@@ -3,7 +3,7 @@ const DEFAULT_ENTITY = {
 };
 
 const JACK_ENTITY = {
-  'entity-type': 'user',
+  ...DEFAULT_ENTITY,
   properties: {
     // TODO: remove when fixed on master, see https://jira.nuxeo.com/browse/NXP-27105
     username: 'jack',

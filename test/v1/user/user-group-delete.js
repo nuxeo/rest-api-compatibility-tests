@@ -26,3 +26,11 @@ t(
     expect(statusCode).toBe(404);
   },
 );
+
+t(
+  'DELETE /user/USER_ID/group/GROUP_ID > remove unexisting user from group',
+  async () => {
+    const { statusCode } = await request.del('/user/foo/group/members');
+    expect(statusCode).toBe(404);
+  },
+);
