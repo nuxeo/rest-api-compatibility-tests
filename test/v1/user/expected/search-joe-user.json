@@ -1,0 +1,38 @@
+{
+  "currentPageIndex": 0,
+  "currentPageOffset": 0,
+  "currentPageSize": 1,
+  "entity-type": "users",
+  "entries": [
+    {
+      "entity-type": "user",
+      "extendedGroups": [],
+      "id": "joe",
+      "isAdministrator": false,
+      "isAnonymous": false,
+      "properties": {
+        "company": "Nuxeo",
+        "email": "devnull@nuxeo.com",
+        "firstName": "Joe",
+        "groups": [],
+        "lastName": "DiMaggio",
+        "tenantId": null,
+        "username": "joe"
+      }
+    }
+  ],
+  "errorMessage": null,
+  "hasError": false,
+  "isLastPageAvailable": false,
+  "isNextPageAvailable": false,
+  "isPaginable": true,
+  "isPreviousPageAvailable": false,
+  "isSortable": false,
+  "maxPageSize": 1000,
+  "numberOfPages": 1,
+  "pageCount": 1,
+  "pageIndex": 0,
+  "pageSize": 50,
+  "resultsCount": 1,
+  "resultsCountLimit": 0
+}

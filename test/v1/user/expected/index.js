@@ -4,6 +4,9 @@ const JACK_IN_MEMBERS = require('./jack-members.json');
 const JACK_UPDATED = require('./jack-updated.json');
 const JOE = require('./joe.json');
 const JOE_USERPROFILE = require('./joe-userprofile.json');
+const SEARCH_ALL_USERS = require('./search-all-users.json');
+const SEARCH_JOE_USER = require('./search-joe-user.json');
+const SEARCH_NO_USER = require('./search-no-user.json');
 
 module.exports = {
   JACK,
@@ -12,4 +15,7 @@ module.exports = {
   JACK_UPDATED,
   JOE,
   JOE_USERPROFILE,
+  SEARCH_ALL_USERS,
+  SEARCH_JOE_USER,
+  SEARCH_NO_USER,
 };
