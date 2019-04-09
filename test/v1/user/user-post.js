@@ -30,7 +30,6 @@ t('POST /user > create user as unauthorized user', async () => {
 });
 
 t('POST /user > create user with missing username', async () => {
-  // missing 'username' property
   const { statusCode } = await request.post('/user', {
     body: DEFAULT_ENTITY,
   });
