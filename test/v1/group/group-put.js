@@ -1,16 +1,21 @@
 const request = require('../request');
 
 const { JOE_AUTH } = require('../../common/joe-user');
-const { GROUP2_UPDATED } = require('./expected');
-const { DEFAULT_ENTITY, GROUP2_ENTITY, GROUP2_ID } = require('./helper');
+const { GROUP2_FETCH_PROPERTIES, GROUP2_UPDATED } = require('./expected');
+const {
+  DEFAULT_ENTITY,
+  GROUP2_ENTITY,
+  GROUP2_ID,
+  GROUP_FETCH_PROPERTIES,
+} = require('./helper');
 
-beforeAll(async () => {
+beforeEach(async () => {
   await request.post('/group', {
     body: GROUP2_ENTITY,
   });
 });
 
-afterAll(async () => {
+afterEach(async () => {
   await request.del('/group/group2');
 });
 
@@ -27,6 +32,21 @@ t('PUT /group/GROUP_ID > update group', async () => {
   });
   expect(statusCode).toBe(200);
   expect(body).toMatchObject(GROUP2_UPDATED);
+});
+
+t('PUT /group/GROUP_ID > update group with fetch properties', async () => {
+  const { statusCode, body } = await request.put('/group/group2', {
+    body: {
+      ...DEFAULT_ENTITY,
+      id: GROUP2_ID,
+      memberUsers: ['joe', 'jack'],
+      memberGroups: ['group3'],
+      parentGroups: ['group1'],
+    },
+    headers: GROUP_FETCH_PROPERTIES,
+  });
+  expect(statusCode).toBe(200);
+  expect(body).toMatchObject(GROUP2_FETCH_PROPERTIES);
 });
 
 t('PUT /group/GROUP_ID > update group as unauthorized user', async () => {
