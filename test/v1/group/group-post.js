@@ -2,12 +2,13 @@ const request = require('../request');
 
 const { GROUP1_ID } = require('../../common/group1-group');
 const { JOE_AUTH } = require('../../common/joe-user');
-const { GROUP2 } = require('./expected');
+const { GROUP2, GROUP2_FETCH_PROPERTIES } = require('./expected');
 const {
   DEFAULT_ENTITY,
   GROUP2_ENTITY,
   GROUP2_ID,
   GROUP2_PROPERTIES,
+  GROUP_FETCH_PROPERTIES_HEADER,
 } = require('./helper');
 
 afterEach(async () => {
@@ -20,6 +21,20 @@ t('POST /group > create group', async () => {
   });
   expect(statusCode).toBe(201);
   expect(body).toMatchObject(GROUP2);
+});
+
+t('POST /group > create group with fetch properties', async () => {
+  const { statusCode, body } = await request.post('/group', {
+    body: {
+      ...GROUP2_ENTITY,
+      memberUsers: ['joe', 'jack'],
+      memberGroups: ['group3'],
+      parentGroups: ['group1'],
+    },
+    headers: GROUP_FETCH_PROPERTIES_HEADER,
+  });
+  expect(statusCode).toBe(201);
+  expect(body).toMatchObject(GROUP2_FETCH_PROPERTIES);
 });
 
 t('POST /group > create group with groupname property', async () => {

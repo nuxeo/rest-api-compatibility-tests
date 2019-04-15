@@ -1,0 +1,15 @@
+{
+  "entity-type": "group",
+  "grouplabel": "Group 2",
+  "groupname": "group2",
+  "id": "group2",
+  "properties": {
+    "description": "The group 2",
+    "grouplabel": "Group 2",
+    "groupname": "group2",
+    "tenantId": null
+  },
+  "memberUsers": ["jack", "joe"],
+  "memberGroups": ["group3"],
+  "parentGroups": ["group1"]
+}

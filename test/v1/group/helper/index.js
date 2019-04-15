@@ -15,9 +15,14 @@ const GROUP2_ENTITY = {
   properties: GROUP2_PROPERTIES,
 };
 
+const GROUP_FETCH_PROPERTIES_HEADER = {
+  'fetch.group': ['memberUsers', 'memberGroups', 'parentGroups'],
+};
+
 module.exports = {
   DEFAULT_ENTITY,
   GROUP2_ENTITY,
   GROUP2_ID,
   GROUP2_PROPERTIES,
+  GROUP_FETCH_PROPERTIES_HEADER,
 };
