@@ -1,0 +1,44 @@
+{
+  "currentPageIndex": 0,
+  "currentPageOffset": 0,
+  "currentPageSize": 1,
+  "entity-type": "users",
+  "entries": [
+    {
+      "entity-type": "user",
+      "extendedGroups": [
+        {
+          "label": "Administrators group",
+          "name": "administrators",
+          "url": "group/administrators"
+        }
+      ],
+      "id": "Administrator",
+      "isAdministrator": true,
+      "isAnonymous": false,
+      "properties": {
+        "company": null,
+        "email": "devnull@nuxeo.com",
+        "firstName": null,
+        "groups": ["administrators"],
+        "lastName": null,
+        "tenantId": null,
+        "username": "Administrator"
+      }
+    }
+  ],
+  "errorMessage": null,
+  "hasError": false,
+  "isLastPageAvailable": true,
+  "isNextPageAvailable": true,
+  "isPaginable": true,
+  "isPreviousPageAvailable": false,
+  "isSortable": false,
+  "maxPageSize": 1000,
+  "numberOfPages": 2,
+  "pageCount": 2,
+  "pageIndex": 0,
+  "pageSize": 1,
+  "resultsCount": 2,
+  "resultsCountLimit": 0
+}

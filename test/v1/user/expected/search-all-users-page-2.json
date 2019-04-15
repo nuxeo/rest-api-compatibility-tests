@@ -1,0 +1,21 @@
+{
+  "currentPageIndex": 2,
+  "currentPageOffset": 2,
+  "currentPageSize": 0,
+  "entity-type": "users",
+  "entries": [],
+  "errorMessage": null,
+  "hasError": false,
+  "isLastPageAvailable": false,
+  "isNextPageAvailable": false,
+  "isPaginable": true,
+  "isPreviousPageAvailable": true,
+  "isSortable": false,
+  "maxPageSize": 1000,
+  "numberOfPages": 2,
+  "pageCount": 2,
+  "pageIndex": 2,
+  "pageSize": 1,
+  "resultsCount": 2,
+  "resultsCountLimit": 0
+}
