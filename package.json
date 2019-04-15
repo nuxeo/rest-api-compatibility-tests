@@ -15,6 +15,6 @@
   "scripts": {
     "format": "prettier --write {*.js,**/*.js}",
     "lint": "eslint '{*.js,**/*.js}'",
-    "test": "jest --verbose"
+    "test": "jest --verbose --runInBand"
   }
 }
