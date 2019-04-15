@@ -36,7 +36,7 @@ The goal is to provide a complete test coverage of HTTP requests for each suppor
 To run the tests:
 
 ```
-yarn test
+yarn test --runInBand
 ```
 
 To check linting with ESLint and code style with Prettier:
