@@ -33,6 +33,12 @@ The goal is to provide a complete test coverage of HTTP requests for each suppor
 - Enrichers.
 - Web adapters.
 
+To install the project's dependencies:
+
+```
+yarn
+```
+
 To run the tests:
 
 ```
