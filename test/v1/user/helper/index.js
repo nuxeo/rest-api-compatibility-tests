@@ -28,13 +28,13 @@ const USER_PROFILE_ENTITY = {
   },
 };
 
-const USER_PROFILE_ENRICHER = {
+const USER_PROFILE_ENRICHER_HEADER = {
   'enrichers.user': 'userprofile',
 };
 
 module.exports = {
   DEFAULT_ENTITY,
   JACK_ENTITY,
-  USER_PROFILE_ENRICHER,
+  USER_PROFILE_ENRICHER_HEADER,
   USER_PROFILE_ENTITY,
 };
