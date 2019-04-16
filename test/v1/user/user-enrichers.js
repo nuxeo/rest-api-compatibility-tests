@@ -8,7 +8,7 @@ const { JOE_ID } = require('../../common/joe-user.js');
 const { JOE_USERPROFILE, JACK_EMPTY_USERPROFILE } = require('./expected');
 const {
   JACK_ENTITY,
-  USER_PROFILE_ENRICHER,
+  USER_PROFILE_ENRICHER_HEADER,
   USER_PROFILE_ENTITY,
 } = require('./helper');
 
@@ -42,7 +42,7 @@ t(
   'GET /user/USER_ID enrichers.users=userprofile > existing user profile',
   async () => {
     const { statusCode, body } = await request.get('/user/joe', {
-      headers: USER_PROFILE_ENRICHER,
+      headers: USER_PROFILE_ENRICHER_HEADER,
     });
     expect(statusCode).toBe(200);
     expect(body).toMatchObject(JOE_USERPROFILE);
@@ -53,7 +53,7 @@ t(
   'GET /user/USER_ID enrichers.users=userprofile > empty user profile',
   async () => {
     const { statusCode, body } = await request.get('/user/jack', {
-      headers: USER_PROFILE_ENRICHER,
+      headers: USER_PROFILE_ENRICHER_HEADER,
     });
     expect(statusCode).toBe(200);
     expect(body).toMatchObject(JACK_EMPTY_USERPROFILE);
