@@ -1,5 +1,6 @@
 # Nuxeo Platform REST API Compatibility Tests
 
+[![Jenkins](http://jenkins.platform.34.74.59.50.nip.io/buildStatus/icon?job=nuxeo/rest-api-compatibility-tests/job/master)](http://jenkins.platform.34.74.59.50.nip.io/job/nuxeo/job/rest-api-compatibility-tests/job/master)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 [![Dependency Status](https://img.shields.io/david/nuxeo/rest-api-compatibility-tests.svg?style=flat-square)](https://david-dm.org/nuxeo/rest-api-compatibility-tests) [![devDependency Status](https://img.shields.io/david/dev/nuxeo/rest-api-compatibility-tests.svg?style=flat-square)](https://david-dm.org/nuxeo/rest-api-compatibility-tests#info=devDependencies)
 
@@ -87,9 +88,11 @@ test/v3/...
 
 ## CI/CD
 
-TODO: to be reviewed
+This set of tests is executed in a [continuous integration pipeline](http://jenkins.platform.34.74.59.50.nip.io/job/nuxeo/job/rest-api-compatibility-tests/) against a Nuxeo Platform configured as following:
 
-This set of tests is executed against the master branch of the Nuxeo platform in a [continuous integration pipeline](https://qa.nuxeo.org/jenkins/job/rest-api-compatibility-tests/).
+- Docker image: `nuxeo/nuxeo:master`
+- PostgreSQL
+- Elasticsearch
 
 The build fails if at least one test fails.
 
