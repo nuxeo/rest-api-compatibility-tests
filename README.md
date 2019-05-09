@@ -87,9 +87,10 @@ test/v3/...
 
 ## CI/CD
 
-This set of tests is executed against the master branch of the Nuxeo platform in a [continuous integration pipeline](#TODO).
+TODO: to be reviewed
 
-// TODO
-The build fails if at least one test fails?
+This set of tests is executed against the master branch of the Nuxeo platform in a [continuous integration pipeline](https://qa.nuxeo.org/jenkins/job/rest-api-compatibility-tests/).
+
+The build fails if at least one test fails.
 
 This allows continuous delivery of the Nuxeo Platform's master branch in terms of REST API.
