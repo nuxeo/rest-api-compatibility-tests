@@ -1,0 +1,34 @@
+{
+  "currentPageIndex": 0,
+  "currentPageOffset": 0,
+  "currentPageSize": 1,
+  "entity-type": "groups",
+  "entries": [
+    {
+      "entity-type": "group",
+      "grouplabel": "Group 1",
+      "groupname": "group1",
+      "id": "group1",
+      "properties": {
+        "description": "The group 1",
+        "grouplabel": "Group 1",
+        "groupname": "group1",
+        "tenantId": null
+      }
+    }
+  ],
+  "errorMessage": null,
+  "hasError": false,
+  "isLastPageAvailable": false,
+  "isNextPageAvailable": false,
+  "isPaginable": true,
+  "isPreviousPageAvailable": false,
+  "isSortable": false,
+  "maxPageSize": 1000,
+  "numberOfPages": 1,
+  "pageCount": 1,
+  "pageIndex": 0,
+  "pageSize": 50,
+  "resultsCount": 1,
+  "resultsCountLimit": 0
+}

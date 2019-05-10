@@ -1,0 +1,70 @@
+{
+  "currentPageIndex": 0,
+  "currentPageOffset": 0,
+  "currentPageSize": 4,
+  "entity-type": "groups",
+  "entries": [
+    {
+      "entity-type": "group",
+      "grouplabel": "Administrators group",
+      "groupname": "administrators",
+      "id": "administrators",
+      "properties": {
+        "description": "Group of users with adminstrative rights",
+        "grouplabel": "Administrators group",
+        "groupname": "administrators",
+        "tenantId": null
+      }
+    },
+    {
+      "entity-type": "group",
+      "grouplabel": "Group 1",
+      "groupname": "group1",
+      "id": "group1",
+      "properties": {
+        "description": "The group 1",
+        "grouplabel": "Group 1",
+        "groupname": "group1",
+        "tenantId": null
+      }
+    },
+    {
+      "entity-type": "group",
+      "grouplabel": "Members group",
+      "groupname": "members",
+      "id": "members",
+      "properties": {
+        "description": "Group of users with read access rights",
+        "grouplabel": "Members group",
+        "groupname": "members",
+        "tenantId": null
+      }
+    },
+    {
+      "entity-type": "group",
+      "grouplabel": "Power users group",
+      "groupname": "powerusers",
+      "id": "powerusers",
+      "properties": {
+        "description": "Group of users with limited administrative rights",
+        "grouplabel": "Power users group",
+        "groupname": "powerusers",
+        "tenantId": null
+      }
+    }
+  ],
+  "errorMessage": null,
+  "hasError": false,
+  "isLastPageAvailable": false,
+  "isNextPageAvailable": false,
+  "isPaginable": true,
+  "isPreviousPageAvailable": false,
+  "isSortable": false,
+  "maxPageSize": 1000,
+  "numberOfPages": 1,
+  "pageCount": 1,
+  "pageIndex": 0,
+  "pageSize": 50,
+  "resultsCount": 4,
+  "resultsCountLimit": 0
+}
