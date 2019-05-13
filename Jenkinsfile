@@ -28,37 +28,57 @@ pipeline {
 
   environment {
     HELM_CHART_REPOSITORY_NAME = 'local-jenkins-x'
-    HELM_RELEASE_NUXEO = 'nuxeo-rest-api-tests'
-    K8S_NAMESPACE_NUXEO = 'nuxeo-rest-api-tests'
+    HELM_CHART_REPOSITORY_URL = 'http://jenkins-x-chartmuseum:8080'
+    HELM_CHART_NUXEO = 'nuxeo'
+    HELM_RELEASE_NUXEO = 'rest-api-tests'
+    NAMESPACE_NUXEO = 'nuxeo-platform-rest-api-tests'
+    SERVICE_NUXEO = "${HELM_RELEASE_NUXEO}-${HELM_CHART_NUXEO}"
+    SERVICE_ACCOUNT = 'jenkins'
   }
 
   stages {
     stage('Test') {
       steps {
         container('nodejs') {
-          try {
-            echo 'Start a Nuxeo Platform instance'
+          script {
+            def ENV_VARS = [
+              "NUXEO_SERVER_URL=http://${SERVICE_NUXEO}.${NAMESPACE_NUXEO}.svc.cluster.local/nuxeo",
+            ];
+            withEnv(ENV_VARS) {
+              try {
+                echo """
+                -----------------------------
+                Start Nuxeo Platform instance
+                -----------------------------"""
 
-            // initialize helm without installing Tyler, using the jenkins service account
-            sh 'helm init --client-only --service-account jenkins'
+                // initialize Helm without installing Tyler
+                sh "helm init --client-only --service-account ${SERVICE_ACCOUNT}"
 
-            // add local chart repository
-            sh "helm repo add \"${HELM_CHART_REPOSITORY_NAME}\" http://jenkins-x-chartmuseum:8080"
+                // add local chart repository
+                sh "helm repo add ${HELM_CHART_REPOSITORY_NAME} ${HELM_CHART_REPOSITORY_URL}"
 
-            // install the nuxeo chart into a namespace created on the fly so it can be easily cleaned up afterwards
-            sh "helm install --name \"${HELM_RELEASE_NUXEO}\" --namespace \"${NUXEO_K8S_NAMESPACE}\" \"${HELM_CHART_REPOSITORY_NAME}\"/nuxeo
+                // install the nuxeo chart into a dedicated namespace that will be cleaned up afterwards
+                sh """
+                  jx step helm install ${HELM_CHART_REPOSITORY_NAME}/${HELM_CHART_NUXEO} \
+                    --name ${HELM_RELEASE_NUXEO} \
+                    --set tags.postgresql=true \
+                    --namespace ${NAMESPACE_NUXEO}
+                  """
 
-            sh "njx k8s rollout --namespace \"${NUXEO_K8S_NAMESPACE}\" deployment \"${NUXEO_K8S_NAMESPACE}-deployment\""
+                // check nuxeo chart deployment status
+                sh "kubectl rollout status deployment ${SERVICE_NUXEO} --namespace ${NAMESPACE_NUXEO}"
 
-            // check nuxeo chart deployment status
-            sh "kubectl rollout status deployment \"${HELM_RELEASE_NUXEO}\"-nuxeo"
-
-            echo 'Run tests with Yarn'
-            sh 'yarn'
-            sh 'yarn test'
-          } finally {
-            // clean up Kubernetes namespace
-            sh "kubectl delete namespace \"${NUXEO_K8S_NAMESPACE}\""
+                echo """
+                -----------------------------
+                Run tests with Yarn
+                -----------------------------"""
+                sh 'yarn'
+                sh 'yarn test'
+              } finally {
+                // clean up namespace
+                sh "kubectl delete namespace ${NAMESPACE_NUXEO}"
+              }
+            }
           }
         }
       }
