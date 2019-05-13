@@ -25,15 +25,40 @@ pipeline {
   agent {
     label "jenkins-nodejs"
   }
+
+  environment {
+    HELM_CHART_REPOSITORY_NAME = 'local-jenkins-x'
+    HELM_RELEASE_NUXEO = 'nuxeo-rest-api-tests'
+    K8S_NAMESPACE_NUXEO = 'nuxeo-rest-api-tests'
+  }
+
   stages {
-    stage('Build and test') {
+    stage('Test') {
       steps {
         container('nodejs') {
-          withEnv(['NUXEO_SERVER_URL=https://nightly.nuxeo.com/nuxeo']) {
-            sh """
-              yarn
-              yarn test
-            """
+          try {
+            echo 'Start a Nuxeo Platform instance'
+
+            // initialize helm without installing Tyler, using the jenkins service account
+            sh 'helm init --client-only --service-account jenkins'
+
+            // add local chart repository
+            sh "helm repo add \"${HELM_CHART_REPOSITORY_NAME}\" http://jenkins-x-chartmuseum:8080"
+
+            // install the nuxeo chart into a namespace created on the fly so it can be easily cleaned up afterwards
+            sh "helm install --name \"${HELM_RELEASE_NUXEO}\" --namespace \"${NUXEO_K8S_NAMESPACE}\" \"${HELM_CHART_REPOSITORY_NAME}\"/nuxeo
+
+            sh "njx k8s rollout --namespace \"${NUXEO_K8S_NAMESPACE}\" deployment \"${NUXEO_K8S_NAMESPACE}-deployment\""
+
+            // check nuxeo chart deployment status
+            sh "kubectl rollout status deployment \"${HELM_RELEASE_NUXEO}\"-nuxeo"
+
+            echo 'Run tests with Yarn'
+            sh 'yarn'
+            sh 'yarn test'
+          } finally {
+            // clean up Kubernetes namespace
+            sh "kubectl delete namespace \"${NUXEO_K8S_NAMESPACE}\""
           }
         }
       }
