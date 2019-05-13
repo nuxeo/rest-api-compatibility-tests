@@ -29,11 +29,12 @@ pipeline {
     stage('Build and test') {
       steps {
         container('nodejs') {
-          sh """
-            npm config set registry http://nexus.l2it.35.231.200.170.nip.io/repository/npm-group/
-            yarn
-            yarn test
-          """
+          withEnv(['NUXEO_SERVER_URL=https://nightly.nuxeo.com/nuxeo']) {
+            sh """
+              yarn
+              yarn test
+            """
+          }
         }
       }
     }
