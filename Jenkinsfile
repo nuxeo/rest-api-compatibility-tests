@@ -33,6 +33,7 @@ pipeline {
     HELM_RELEASE_NUXEO = 'rest-api-tests'
     NAMESPACE_NUXEO = 'nuxeo-platform-rest-api-tests'
     SERVICE_NUXEO = "${HELM_RELEASE_NUXEO}-${HELM_CHART_NUXEO}"
+    SERVICE_DOMAIN = ".${NAMESPACE_NUXEO}.svc.cluster.local"
     SERVICE_ACCOUNT = 'jenkins'
   }
 
@@ -42,13 +43,13 @@ pipeline {
         container('nodejs') {
           script {
             def ENV_VARS = [
-              "NUXEO_SERVER_URL=http://${SERVICE_NUXEO}.${NAMESPACE_NUXEO}.svc.cluster.local/nuxeo",
+              "NUXEO_SERVER_URL=http://${SERVICE_NUXEO}${SERVICE_DOMAIN}/nuxeo",
             ];
             withEnv(ENV_VARS) {
               try {
                 echo """
                 -----------------------------
-                Start Nuxeo Platform instance
+                Start Nuxeo Platform Instance
                 -----------------------------"""
 
                 // initialize Helm without installing Tyler
@@ -58,6 +59,7 @@ pipeline {
                 sh "helm repo add ${HELM_CHART_REPOSITORY_NAME} ${HELM_CHART_REPOSITORY_URL}"
 
                 // install the nuxeo chart into a dedicated namespace that will be cleaned up afterwards
+                // use 'jx step helm install' to avoid 'Error: could not find tiller' when running 'helm install'
                 sh """
                   jx step helm install ${HELM_CHART_REPOSITORY_NAME}/${HELM_CHART_NUXEO} \
                     --name ${HELM_RELEASE_NUXEO} \
@@ -70,7 +72,7 @@ pipeline {
 
                 echo """
                 -----------------------------
-                Run tests with Yarn
+                Run Tests with Yarn
                 -----------------------------"""
                 sh 'yarn'
                 sh 'yarn test'
@@ -84,4 +86,10 @@ pipeline {
       }
     }
   }
+
+  // post {
+  //   always {
+  //     archive '**/target*/failsafe-reports/*, **/target*/*.png, **/target*/**/*.log, **/target*/**/log/*'
+  //   }
+  // }
 }
