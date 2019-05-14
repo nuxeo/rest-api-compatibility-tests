@@ -17,15 +17,23 @@
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
 properties([
-  [$class: 'BuildDiscarderProperty', strategy: [$class: 'LogRotator', daysToKeepStr: '60', numToKeepStr: '60', artifactNumToKeepStr: '1']],
-  [$class: 'GithubProjectProperty', displayName: '', projectUrlStr: 'https://github.com/nuxeo/nuxeo-aspera-connector/']
+  [$class: 'GithubProjectProperty', projectUrlStr: 'https://github.com/nuxeo/rest-api-compatibility-tests/'],
+  [$class: 'BuildDiscarderProperty', strategy: [$class: 'LogRotator', daysToKeepStr: '60', numToKeepStr: '60', artifactNumToKeepStr: '5']],
 ])
+
+void setGitHubBuildStatus(String message, String state) {
+  step([
+    $class: 'GitHubCommitStatusSetter',
+    reposSource: [$class: 'ManuallyEnteredRepositorySource', url: 'https://github.com/nuxeo/rest-api-compatibility-tests'],
+    contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: 'nuxeo/master'],
+    statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: message, state: state]]],
+  ]);
+}
 
 pipeline {
   agent {
     label "jenkins-nodejs"
   }
-
   environment {
     HELM_CHART_REPOSITORY_NAME = 'local-jenkins-x'
     HELM_CHART_REPOSITORY_URL = 'http://jenkins-x-chartmuseum:8080'
@@ -36,60 +44,68 @@ pipeline {
     SERVICE_DOMAIN = ".${NAMESPACE_NUXEO}.svc.cluster.local"
     SERVICE_ACCOUNT = 'jenkins'
   }
-
   stages {
-    stage('Test') {
+    stage('Install and start Nuxeo Platform') {
       steps {
+        setGitHubBuildStatus('Install and start Nuxeo Platform', 'PENDING')
         container('nodejs') {
-          script {
-            def ENV_VARS = [
-              "NUXEO_SERVER_URL=http://${SERVICE_NUXEO}${SERVICE_DOMAIN}/nuxeo",
-            ];
-            withEnv(ENV_VARS) {
-              try {
-                echo """
-                -----------------------------
-                Start Nuxeo Platform Instance
-                -----------------------------"""
+          echo """
+          --------------------------------
+          Install and start Nuxeo Platform
+          --------------------------------"""
 
-                // initialize Helm without installing Tyler
-                sh "helm init --client-only --service-account ${SERVICE_ACCOUNT}"
+          // initialize Helm without installing Tyler
+          sh "helm init --client-only --service-account ${SERVICE_ACCOUNT}"
 
-                // add local chart repository
-                sh "helm repo add ${HELM_CHART_REPOSITORY_NAME} ${HELM_CHART_REPOSITORY_URL}"
+          // add local chart repository
+          sh "helm repo add ${HELM_CHART_REPOSITORY_NAME} ${HELM_CHART_REPOSITORY_URL}"
 
-                // install the nuxeo chart into a dedicated namespace that will be cleaned up afterwards
-                // use 'jx step helm install' to avoid 'Error: could not find tiller' when running 'helm install'
-                sh """
-                  jx step helm install ${HELM_CHART_REPOSITORY_NAME}/${HELM_CHART_NUXEO} \
-                    --name ${HELM_RELEASE_NUXEO} \
-                    --set tags.postgresql=true \
-                    --namespace ${NAMESPACE_NUXEO}
-                  """
+          // install the nuxeo chart into a dedicated namespace that will be cleaned up afterwards
+          // use 'jx step helm install' to avoid 'Error: could not find tiller' when running 'helm install'
+          sh """
+            jx step helm install ${HELM_CHART_REPOSITORY_NAME}/${HELM_CHART_NUXEO} \
+              --name ${HELM_RELEASE_NUXEO} \
+              --set tags.postgresql=true \
+              --namespace ${NAMESPACE_NUXEO}
+            """
 
-                // check nuxeo chart deployment status
-                sh "kubectl rollout status deployment ${SERVICE_NUXEO} --namespace ${NAMESPACE_NUXEO}"
-
-                echo """
-                -----------------------------
-                Run Tests with Yarn
-                -----------------------------"""
-                sh 'yarn'
-                sh 'yarn test'
-              } finally {
-                // clean up namespace
-                sh "kubectl delete namespace ${NAMESPACE_NUXEO}"
-              }
-            }
+          // check nuxeo chart deployment status
+          sh "kubectl rollout status deployment ${SERVICE_NUXEO} --namespace ${NAMESPACE_NUXEO}"
+        }
+      }
+    }
+    stage('Run tests with Yarn') {
+      steps {
+        setGitHubBuildStatus('Run tests with Yarn', 'PENDING')
+        container('nodejs') {
+          withEnv([ "NUXEO_SERVER_URL=http://${SERVICE_NUXEO}${SERVICE_DOMAIN}/nuxeo"]) {
+            echo """
+            -----------------------------
+            Run tests with Yarn
+            -----------------------------"""
+            sh 'yarn'
+            sh 'yarn test'
           }
         }
       }
     }
   }
+  post {
+    always {
+      // archive Nuxeo server logs
+      // archiveArtifacts '**/target*/failsafe-reports/*, **/target*/*.png, **/target*/**/*.log, **/target*/**/log/*'
 
-  // post {
-  //   always {
-  //     archive '**/target*/failsafe-reports/*, **/target*/*.png, **/target*/**/*.log, **/target*/**/log/*'
-  //   }
-  // }
+      // clean up namespace
+      sh "kubectl delete namespace ${NAMESPACE_NUXEO}"
+
+      // JIRA
+      step([$class: 'JiraIssueUpdater', issueSelector: [$class: 'DefaultIssueSelector'], scm: scm])
+    }
+    success {
+      setGitHubBuildStatus('REST API tests succeeded against nuxeo/master', 'SUCCESS')
+    }
+    failure {
+      setGitHubBuildStatus('REST API tests failed against nuxeo/master', 'FAILURE')
+    }
+  }
 }
