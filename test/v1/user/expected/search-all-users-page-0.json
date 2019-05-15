@@ -17,11 +17,11 @@
       "isAdministrator": true,
       "isAnonymous": false,
       "properties": {
-        "company": null,
+        "company": "",
         "email": "devnull@nuxeo.com",
-        "firstName": null,
+        "firstName": "",
         "groups": ["administrators"],
-        "lastName": null,
+        "lastName": "",
         "tenantId": null,
         "username": "Administrator"
       }
