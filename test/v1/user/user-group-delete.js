@@ -5,13 +5,13 @@ const { JACK_ENTITY } = require('./helper');
 beforeAll(async () => {
   const body = { ...JACK_ENTITY };
   body.properties.groups = ['members'];
-  await request.post('/user', {
+  await request.strictPost('/user', {
     body,
   });
 });
 
 afterAll(async () => {
-  await request.del('/user/jack');
+  await request.strictDel('/user/jack');
 });
 
 t('DELETE /user/USER_ID/group/GROUP_ID > remove user from group', async () => {

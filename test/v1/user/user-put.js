@@ -5,13 +5,13 @@ const { JACK_UPDATED } = require('./expected');
 const { DEFAULT_ENTITY, JACK_ENTITY } = require('./helper');
 
 beforeAll(async () => {
-  await request.post('/user', {
+  await request.strictPost('/user', {
     body: JACK_ENTITY,
   });
 });
 
 afterAll(async () => {
-  await request.del('/user/jack');
+  await request.strictDel('/user/jack');
 });
 
 t('PUT /user/USER_ID > update user', async () => {

@@ -4,13 +4,13 @@ const { JOE_GROUP2 } = require('./expected');
 const { GROUP2_ENTITY } = require('./helper');
 
 beforeAll(async () => {
-  await request.post('/group', {
+  await request.strictPost('/group', {
     body: GROUP2_ENTITY,
   });
 });
 
 afterAll(async () => {
-  await request.del('/group/group2');
+  await request.strictDel('/group/group2');
 });
 
 t('POST /group/GROUP_ID/user/USER_ID > add user to group', async () => {

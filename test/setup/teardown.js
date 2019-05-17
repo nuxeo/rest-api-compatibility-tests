@@ -9,11 +9,11 @@ module.exports = async () => {
   console.log('BEGIN TEARDOWN');
 
   // delete group1 group
-  let res = await request.del(`/group/${GROUP1_ID}`);
+  let res = await request.strictDel(`/group/${GROUP1_ID}`);
   console.log(`${res.statusCode} - Deleted group1 group`);
 
   // delete joe user
-  res = await request.del(`/user/${JOE_ID}`);
+  res = await request.strictDel(`/user/${JOE_ID}`);
   console.log(`${res.statusCode} - Deleted joe user`);
 
   console.log('END TEARDOWN');

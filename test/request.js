@@ -70,5 +70,15 @@ module.exports = (version) => {
   r.put = async (path, options) => r(path, { ...options, method: 'PUT' });
   r.del = async (path, options) => r(path, { ...options, method: 'DELETE' });
 
+  // fail with StatusCodeError in case of status code other than 2xx
+  r.strictGet = async (path, options) =>
+    r.get(path, { ...options, simple: true });
+  r.strictPost = async (path, options) =>
+    r.post(path, { ...options, simple: true });
+  r.strictPut = async (path, options) =>
+    r.put(path, { ...options, simple: true });
+  r.strictDel = async (path, options) =>
+    r.del(path, { ...options, simple: true });
+
   return r;
 };
