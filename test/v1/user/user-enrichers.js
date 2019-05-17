@@ -2,7 +2,9 @@ const request = require('../request');
 
 const {
   createPersonalWorkspace,
+  createUserWorkspaceRoot,
   deletePersonalWorkspace,
+  deleteUserWorkspaceRoot,
 } = require('../../common/personal-workspace');
 const { JOE_ID } = require('../../common/joe-user.js');
 const { JOE_USERPROFILE, JACK_EMPTY_USERPROFILE } = require('./expected');
@@ -13,6 +15,9 @@ const {
 } = require('./helper');
 
 beforeAll(async () => {
+  // create user workspace root
+  await createUserWorkspaceRoot();
+
   // create joe's personal workspace
   const personalWorkspaceId = await createPersonalWorkspace(JOE_ID);
 
@@ -36,6 +41,9 @@ afterAll(async () => {
 
   // delete jack's personal workspace
   await deletePersonalWorkspace('jack');
+
+  // delete user workspace root
+  await deleteUserWorkspaceRoot();
 });
 
 t(
