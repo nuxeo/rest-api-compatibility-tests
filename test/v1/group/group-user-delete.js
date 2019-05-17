@@ -5,13 +5,13 @@ const { GROUP2_ENTITY } = require('./helper');
 beforeAll(async () => {
   const body = { ...GROUP2_ENTITY };
   body.memberUsers = ['joe'];
-  await request.post('/group', {
+  await request.strictPost('/group', {
     body,
   });
 });
 
 afterAll(async () => {
-  await request.del('/group/group2');
+  await request.strictDel('/group/group2');
 });
 
 t('DELETE /group/GROUP_ID/user/USER_ID > remove user from group', async () => {

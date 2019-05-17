@@ -4,7 +4,7 @@ const { JOE_AUTH } = require('../../common/joe-user');
 const { GROUP2_ENTITY } = require('./helper');
 
 beforeAll(async () => {
-  await request.post('/group', {
+  await request.strictPost('/group', {
     body: GROUP2_ENTITY,
   });
 });

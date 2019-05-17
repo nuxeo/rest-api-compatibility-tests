@@ -4,13 +4,13 @@ const { JACK_IN_MEMBERS } = require('./expected');
 const { JACK_ENTITY } = require('./helper');
 
 beforeAll(async () => {
-  await request.post('/user', {
+  await request.strictPost('/user', {
     body: JACK_ENTITY,
   });
 });
 
 afterAll(async () => {
-  await request.del('/user/jack');
+  await request.strictDel('/user/jack');
 });
 
 t('POST /user/USER_ID/group/GROUP_ID > add user to group', async () => {

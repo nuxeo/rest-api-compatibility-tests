@@ -4,7 +4,7 @@ const { GROUP1, GROUP2_FETCH_PROPERTIES } = require('./expected');
 const { GROUP2_ENTITY, GROUP_FETCH_PROPERTIES_HEADER } = require('./helper');
 
 beforeAll(async () => {
-  await request.post('/group', {
+  await request.strictPost('/group', {
     body: {
       ...GROUP2_ENTITY,
       memberUsers: ['joe', 'jack'],
@@ -15,7 +15,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await request.del('/group/group2');
+  await request.strictDel('/group/group2');
 });
 
 t('GET /group/GROUP_ID > get group', async () => {

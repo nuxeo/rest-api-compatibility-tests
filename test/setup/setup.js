@@ -10,11 +10,15 @@ module.exports = async () => {
   console.log('BEGIN SETUP');
 
   // create joe user
-  let res = await request.post('/user', { body: JOE_ENTITY });
+  let res = await request.strictPost('/user', {
+    body: JOE_ENTITY,
+  });
   console.log(`${res.statusCode} - Created ${res.body.id} user`);
 
   // create group1 group
-  res = await request.post('/group', { body: GROUP1_ENTITY });
+  res = await request.strictPost('/group', {
+    body: GROUP1_ENTITY,
+  });
   console.log(`${res.statusCode} - Created ${res.body.id} group`);
 
   console.log('END SETUP');

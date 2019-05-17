@@ -5,7 +5,7 @@ const { JACK } = require('./expected');
 const { DEFAULT_ENTITY, JACK_ENTITY } = require('./helper');
 
 afterAll(async () => {
-  await request.del(`/user/jack`);
+  await request.strictDel(`/user/jack`);
 });
 
 t('POST /user > create user', async () => {

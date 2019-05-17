@@ -10,13 +10,13 @@ const {
 } = require('./helper');
 
 beforeEach(async () => {
-  await request.post('/group', {
+  await request.strictPost('/group', {
     body: GROUP2_ENTITY,
   });
 });
 
 afterEach(async () => {
-  await request.del('/group/group2');
+  await request.strictDel('/group/group2');
 });
 
 t('PUT /group/GROUP_ID > update group', async () => {

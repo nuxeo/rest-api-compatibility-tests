@@ -17,19 +17,19 @@ beforeAll(async () => {
   const personalWorkspaceId = await createPersonalWorkspace(JOE_ID);
 
   // create joe's user profile document
-  await request.post(`/id/${personalWorkspaceId}`, {
+  await request.strictPost(`/id/${personalWorkspaceId}`, {
     body: USER_PROFILE_ENTITY,
   });
 
   // create jack user without user profile document
-  await request.post('/user', {
+  await request.strictPost('/user', {
     body: JACK_ENTITY,
   });
 });
 
 afterAll(async () => {
   // delete jack user
-  await request.del('/user/jack');
+  await request.strictDel('/user/jack');
 
   // delete joe's personal workspace
   await deletePersonalWorkspace(JOE_ID);
