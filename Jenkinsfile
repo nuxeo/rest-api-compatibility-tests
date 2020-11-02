@@ -93,6 +93,7 @@ pipeline {
                 --name ${HELM_RELEASE_NUXEO} \
                 --set tags.mongodb=true \
                 --set tags.elasticsearch=true \
+                --set nuxeo.image.tag=11.x \
                 --namespace ${NAMESPACE_NUXEO}
               """
 
