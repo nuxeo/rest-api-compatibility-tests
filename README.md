@@ -36,25 +36,25 @@ The goal is to provide a complete test coverage of HTTP requests for each suppor
 
 To install the project's dependencies:
 
-```
+```shell
 yarn
 ```
 
-To run the tests:
+To run the tests, make sure that a Nuxeo server is up and available at `http://localhost:8080/nuxeo`, or the value of the `NUXEO_SERVER_URL` environment variable, then run:
 
-```
+```shell
 yarn test
 ```
 
 To check linting with ESLint and code style with Prettier:
 
-```
+```shell
 yarn lint
 ```
 
 To format with Prettier:
 
-```
+```shell
 yarn format
 ```
 
@@ -62,7 +62,7 @@ To debug the tests in VS Code, just start the **Debug Jest Tests** debug configu
 
 To debug some specific tests, you can use these options in [launch.json](.vscode/launch.json):
 
-```
+```json
 "runtimeArgs": [
   ...
   "--testPathPattern=user-post",
@@ -72,18 +72,14 @@ To debug some specific tests, you can use these options in [launch.json](.vscode
 
 ## Structure
 
-```
-test/v1/user/user-post.js
-test/v1/user/user-get.js
-test/v1/user/...
-test/v1/group/group-post.js
+```shell
+test/v1/group/group-delete.js
+test/v1/group/group-get.js
 test/v1/group/...
-test/v1/document/docId-post.js
-test/v1/document/...
+test/v1/user/user-delete.js
+test/v1/user/user-enrichers.js
+test/v1/user/...
 test/v1/...
-test/v2/user/user-post.js
-test/v2/...
-test/v3/...
 ```
 
 ## CI/CD

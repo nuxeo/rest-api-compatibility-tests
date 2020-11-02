@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2019 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,28 @@
  * Contributors:
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
+repositoryUrl = 'https://github.com/nuxeo/rest-api-compatibility-tests/'
+
 properties([
-  [$class: 'GithubProjectProperty', projectUrlStr: 'https://github.com/nuxeo/rest-api-compatibility-tests/'],
+  [$class: 'GithubProjectProperty', projectUrlStr: repositoryUrl],
   [$class: 'BuildDiscarderProperty', strategy: [$class: 'LogRotator', daysToKeepStr: '60', numToKeepStr: '60', artifactNumToKeepStr: '5']],
 ])
 
 void setGitHubBuildStatus(String context, String message, String state) {
   step([
     $class: 'GitHubCommitStatusSetter',
-    reposSource: [$class: 'ManuallyEnteredRepositorySource', url: 'https://github.com/nuxeo/rest-api-compatibility-tests'],
+    reposSource: [$class: 'ManuallyEnteredRepositorySource', url: repositoryUrl],
     contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: context],
     statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: message, state: state]]],
   ])
 }
 
 pipeline {
+
   agent {
     label "jenkins-nodejs"
   }
+
   environment {
     HELM_CHART_REPOSITORY_NAME = 'local-jenkins-x'
     HELM_CHART_REPOSITORY_URL = 'http://jenkins-x-chartmuseum:8080'
@@ -42,11 +46,29 @@ pipeline {
     NAMESPACE_NUXEO = "nuxeo-platform-rest-api-tests-${BUILD_NUMBER}"
     SERVICE_NUXEO = "${HELM_RELEASE_NUXEO}-${HELM_CHART_NUXEO}"
     SERVICE_DOMAIN = ".${NAMESPACE_NUXEO}.svc.cluster.local"
-    SERVICE_ACCOUNT = 'jenkins'
   }
+
   stages {
-    stage('Install Yarn dependencies and run eslint') {
+
+    stage('Set labels') {
       steps {
+        container('nodejs') {
+          echo """
+          ----------------------------------------
+          Set Kubernetes resource labels
+          ----------------------------------------
+          """
+          echo "Set label 'branch: ${BRANCH_NAME}' on pod ${NODE_NAME}"
+          sh """
+            kubectl label pods ${NODE_NAME} branch=${BRANCH_NAME}
+          """
+        }
+      }
+    }
+
+    stage('Yarn/ESLint') {
+      steps {
+        setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'PENDING')
         container('nodejs') {
           echo """
           ----------------------------------------
@@ -62,25 +84,26 @@ pipeline {
       }
       post {
         success {
-          setGitHubBuildStatus('eslint', 'Install Yarn dependencies and run ESLint', 'SUCCESS')
+          setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'SUCCESS')
         }
         failure {
-          setGitHubBuildStatus('eslint', 'Install Yarn dependencies and run ESLint', 'FAILURE')
+          setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'FAILURE')
         }
       }
     }
-    stage('Run REST API tests against nuxeo/master/postgresql/elasticsearch') {
+
+    stage('Run REST API tests') {
       steps {
-        setGitHubBuildStatus('master/postgresql/elasticsearch', 'Run REST API tests', 'PENDING')
+        setGitHubBuildStatus('test', 'Run REST API tests', 'PENDING')
         container('nodejs') {
-          withEnv([ "NUXEO_SERVER_URL=http://${SERVICE_NUXEO}${SERVICE_DOMAIN}/nuxeo"]) {
+          withEnv(["NUXEO_SERVER_URL=http://${SERVICE_NUXEO}${SERVICE_DOMAIN}/nuxeo"]) {
             echo """
             -------------------------------------------------------
-            Install and start nuxeo/master/postgresql/elasticsearch
+            Run REST API tests against nuxeo/postgresql/elasticsearch
             -------------------------------------------------------"""
 
             // initialize Helm without installing Tiller
-            sh "helm init --client-only --service-account ${SERVICE_ACCOUNT}"
+            sh 'helm init --client-only'
 
             // add local chart repository
             sh "helm repo add ${HELM_CHART_REPOSITORY_NAME} ${HELM_CHART_REPOSITORY_URL}"
@@ -91,7 +114,7 @@ pipeline {
               jx step helm install ${HELM_CHART_REPOSITORY_NAME}/${HELM_CHART_NUXEO} \
                 --name ${HELM_RELEASE_NUXEO} \
                 --set tags.postgresql=true \
-                --set tags.elasticsearch=true,elasticsearch.deploy=true,nuxeo.elasticsearch.deploy=true \
+                --set tags.elasticsearch=true \
                 --namespace ${NAMESPACE_NUXEO}
               """
 
@@ -118,7 +141,7 @@ pipeline {
                 ).trim()
                 if (nuxeoPod) {
                   def logFile = 'server.log'
-                  sh "kubectl cp ${NAMESPACE_NUXEO}/${nuxeoPod}:/var/log/nuxeo/${logFile} ."
+                  sh "kubectl cp ${NAMESPACE_NUXEO}/${nuxeoPod}:/var/log/nuxeo/${logFile} ${logFile}"
                   archiveArtifacts "${logFile}"
                 } else {
                   echo "No pod found in namespace ${NAMESPACE_NUXEO} for the ${SERVICE_NUXEO} service. Won't archive any artifact."
@@ -134,19 +157,19 @@ pipeline {
           }
         }
         success {
-          setGitHubBuildStatus('master/postgresql/elasticsearch', 'Run REST API tests', 'SUCCESS')
+          setGitHubBuildStatus('test', 'Run REST API tests', 'SUCCESS')
         }
         failure {
-          setGitHubBuildStatus('master/postgresql/elasticsearch', 'Run REST API tests', 'FAILURE')
+          setGitHubBuildStatus('test', 'Run REST API tests', 'FAILURE')
         }
       }
     }
   }
+
   post {
     always {
       script {
         if (BRANCH_NAME == 'master') {
-          // update JIRA issue
           step([$class: 'JiraIssueUpdater', issueSelector: [$class: 'DefaultIssueSelector'], scm: scm])
         }
       }
