@@ -72,12 +72,12 @@ pipeline {
     }
     stage('Run REST API tests') {
       steps {
-        setGitHubBuildStatus('master/postgresql/elasticsearch', 'Run REST API tests', 'PENDING')
+        setGitHubBuildStatus('master/mongodb/elasticsearch', 'Run REST API tests', 'PENDING')
         container('nodejs') {
           withEnv(["NUXEO_SERVER_URL=http://${SERVICE_NUXEO}${SERVICE_DOMAIN}/nuxeo"]) {
             echo """
             -------------------------------------------------------
-            Install and start nuxeo/master/postgresql/elasticsearch
+            Install and start nuxeo/master/mongodb/elasticsearch
             -------------------------------------------------------"""
 
             // initialize Helm without installing Tiller
@@ -91,7 +91,7 @@ pipeline {
             sh """
               jx step helm install ${HELM_CHART_REPOSITORY_NAME}/${HELM_CHART_NUXEO} \
                 --name ${HELM_RELEASE_NUXEO} \
-                --set tags.postgresql=true \
+                --set tags.mongodb=true \
                 --set tags.elasticsearch=true \
                 --namespace ${NAMESPACE_NUXEO}
               """
@@ -135,10 +135,10 @@ pipeline {
           }
         }
         success {
-          setGitHubBuildStatus('master/postgresql/elasticsearch', 'Run REST API tests', 'SUCCESS')
+          setGitHubBuildStatus('master/mongodb/elasticsearch', 'Run REST API tests', 'SUCCESS')
         }
         failure {
-          setGitHubBuildStatus('master/postgresql/elasticsearch', 'Run REST API tests', 'FAILURE')
+          setGitHubBuildStatus('master/mongodb/elasticsearch', 'Run REST API tests', 'FAILURE')
         }
       }
     }
