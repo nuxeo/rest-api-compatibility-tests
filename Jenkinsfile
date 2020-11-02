@@ -99,7 +99,7 @@ pipeline {
           withEnv(["NUXEO_SERVER_URL=http://${SERVICE_NUXEO}${SERVICE_DOMAIN}/nuxeo"]) {
             echo """
             -------------------------------------------------------
-            Run REST API tests against nuxeo/postgresql/elasticsearch
+            Run REST API tests against nuxeo/mongodb/elasticsearch
             -------------------------------------------------------"""
 
             // initialize Helm without installing Tiller
@@ -113,7 +113,7 @@ pipeline {
             sh """
               jx step helm install ${HELM_CHART_REPOSITORY_NAME}/${HELM_CHART_NUXEO} \
                 --name ${HELM_RELEASE_NUXEO} \
-                --set tags.postgresql=true \
+                --set tags.mongodb=true \
                 --set tags.elasticsearch=true \
                 --namespace ${NAMESPACE_NUXEO}
               """
