@@ -86,7 +86,7 @@ test/v1/...
 
 This set of tests is executed in a [continuous integration pipeline](https://jenkins.platform.dev.nuxeo.com/job/nuxeo/job/rest-api-compatibility-tests/) against a Nuxeo Platform configured as following:
 
-- Docker image: `nuxeo/nuxeo:master`
+- Docker image: `nuxeo/nuxeo:11.x`
 - MongoDB
 - Elasticsearch
 
