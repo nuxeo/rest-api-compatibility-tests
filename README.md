@@ -36,25 +36,25 @@ The goal is to provide a complete test coverage of HTTP requests for each suppor
 
 To install the project's dependencies:
 
-```
+```shell
 yarn
 ```
 
 To run the tests:
 
-```
+```shell
 yarn test
 ```
 
 To check linting with ESLint and code style with Prettier:
 
-```
+```shell
 yarn lint
 ```
 
 To format with Prettier:
 
-```
+```shell
 yarn format
 ```
 
@@ -62,7 +62,7 @@ To debug the tests in VS Code, just start the **Debug Jest Tests** debug configu
 
 To debug some specific tests, you can use these options in [launch.json](.vscode/launch.json):
 
-```
+```json
 "runtimeArgs": [
   ...
   "--testPathPattern=user-post",
@@ -72,7 +72,7 @@ To debug some specific tests, you can use these options in [launch.json](.vscode
 
 ## Structure
 
-```
+```shell
 test/v1/user/user-post.js
 test/v1/user/user-get.js
 test/v1/user/...

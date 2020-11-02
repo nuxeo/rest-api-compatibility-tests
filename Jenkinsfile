@@ -16,15 +16,17 @@
  * Contributors:
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
+repositoryUrl = 'https://github.com/nuxeo/rest-api-compatibility-tests/'
+
 properties([
-  [$class: 'GithubProjectProperty', projectUrlStr: 'https://github.com/nuxeo/rest-api-compatibility-tests/'],
+  [$class: 'GithubProjectProperty', projectUrlStr: repositoryUrl],
   [$class: 'BuildDiscarderProperty', strategy: [$class: 'LogRotator', daysToKeepStr: '60', numToKeepStr: '60', artifactNumToKeepStr: '5']],
 ])
 
 void setGitHubBuildStatus(String context, String message, String state) {
   step([
     $class: 'GitHubCommitStatusSetter',
-    reposSource: [$class: 'ManuallyEnteredRepositorySource', url: 'https://github.com/nuxeo/rest-api-compatibility-tests'],
+    reposSource: [$class: 'ManuallyEnteredRepositorySource', url: repositoryUrl],
     contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: context],
     statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: message, state: state]]],
   ])
@@ -42,10 +44,9 @@ pipeline {
     NAMESPACE_NUXEO = "nuxeo-platform-rest-api-tests-${BUILD_NUMBER}"
     SERVICE_NUXEO = "${HELM_RELEASE_NUXEO}-${HELM_CHART_NUXEO}"
     SERVICE_DOMAIN = ".${NAMESPACE_NUXEO}.svc.cluster.local"
-    SERVICE_ACCOUNT = 'jenkins'
   }
   stages {
-    stage('Install Yarn dependencies and run eslint') {
+    stage('Yarn/ESLint') {
       steps {
         container('nodejs') {
           echo """
@@ -62,25 +63,25 @@ pipeline {
       }
       post {
         success {
-          setGitHubBuildStatus('eslint', 'Install Yarn dependencies and run ESLint', 'SUCCESS')
+          setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'SUCCESS')
         }
         failure {
-          setGitHubBuildStatus('eslint', 'Install Yarn dependencies and run ESLint', 'FAILURE')
+          setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'FAILURE')
         }
       }
     }
-    stage('Run REST API tests against nuxeo/master/postgresql/elasticsearch') {
+    stage('Run REST API tests') {
       steps {
         setGitHubBuildStatus('master/postgresql/elasticsearch', 'Run REST API tests', 'PENDING')
         container('nodejs') {
-          withEnv([ "NUXEO_SERVER_URL=http://${SERVICE_NUXEO}${SERVICE_DOMAIN}/nuxeo"]) {
+          withEnv(["NUXEO_SERVER_URL=http://${SERVICE_NUXEO}${SERVICE_DOMAIN}/nuxeo"]) {
             echo """
             -------------------------------------------------------
             Install and start nuxeo/master/postgresql/elasticsearch
             -------------------------------------------------------"""
 
             // initialize Helm without installing Tiller
-            sh "helm init --client-only --service-account ${SERVICE_ACCOUNT}"
+            sh 'helm init --client-only'
 
             // add local chart repository
             sh "helm repo add ${HELM_CHART_REPOSITORY_NAME} ${HELM_CHART_REPOSITORY_URL}"
@@ -91,7 +92,7 @@ pipeline {
               jx step helm install ${HELM_CHART_REPOSITORY_NAME}/${HELM_CHART_NUXEO} \
                 --name ${HELM_RELEASE_NUXEO} \
                 --set tags.postgresql=true \
-                --set tags.elasticsearch=true,elasticsearch.deploy=true,nuxeo.elasticsearch.deploy=true \
+                --set tags.elasticsearch=true \
                 --namespace ${NAMESPACE_NUXEO}
               """
 
