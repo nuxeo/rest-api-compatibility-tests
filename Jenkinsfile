@@ -32,6 +32,99 @@ void setGitHubBuildStatus(String context, String message, String state) {
   ])
 }
 
+def helmAddRepository(name, url) {
+  sh "helm3 repo add ${name} ${url}"
+}
+
+def helmAddBitnamiRepository() {
+  helmAddRepository("${BITNAMI_CHART_REPOSITORY_NAME}", "${BITNAMI_CHART_REPOSITORY_URL}")
+}
+
+def helmAddElasticRepository() {
+  helmAddRepository("${ELASTIC_CHART_REPOSITORY_NAME}", "${ELASTIC_CHART_REPOSITORY_URL}")
+}
+
+def helmAddNuxeoRepository() {
+  helmAddRepository("${NUXEO_CHART_REPOSITORY_NAME}", "${NUXEO_CHART_REPOSITORY_URL}")
+}
+
+def helmInstall(release, repository, chart, version, namespace, values) {
+  sh """
+    helm3 install ${release} ${repository}/${chart} \
+      --version=${version} \
+      --namespace=${namespace} \
+      --values=${values}
+  """
+}
+
+def helmInstallMongoDB() {
+  helmInstall("${MONGODB_CHART_NAME}", "${BITNAMI_CHART_REPOSITORY_NAME}", "${MONGODB_CHART_NAME}", "${MONGODB_CHART_VERSION}", "${NAMESPACE}", "${HELM_VALUES_DIR}/values-mongodb.yaml~gen")
+}
+
+def helmInstallElasticsearch() {
+  helmInstall("${ELASTICSEARCH_CHART_NAME}", "${ELASTIC_CHART_REPOSITORY_NAME}", "${ELASTICSEARCH_CHART_NAME}", "${ELASTICSEARCH_CHART_VERSION}", "${NAMESPACE}", "${HELM_VALUES_DIR}/values-elasticsearch.yaml~gen")
+}
+
+def helmInstallKafka() {
+  helmInstall("${KAFKA_CHART_NAME}", "${BITNAMI_CHART_REPOSITORY_NAME}", "${KAFKA_CHART_NAME}", "${KAFKA_CHART_VERSION}", "${NAMESPACE}", "${HELM_VALUES_DIR}/values-kafka.yaml~gen")
+}
+
+def helmInstallNuxeo() {
+  helmInstall("${NUXEO_CHART_NAME}", "${NUXEO_CHART_REPOSITORY_NAME}", "${NUXEO_CHART_NAME}", "${NUXEO_CHART_VERSION}", "${NAMESPACE}", "${HELM_VALUES_DIR}/values-nuxeo.yaml~gen")
+}
+
+def helmUninstall(release, namespace) {
+  sh "helm3 uninstall ${release} --namespace=${namespace}"
+}
+
+def helmUninstallMongoDB() {
+  helmUninstall("${MONGODB_CHART_NAME}", "${NAMESPACE}")
+}
+
+def helmUninstallElasticsearch() {
+  helmUninstall("${ELASTICSEARCH_CHART_NAME}", "${NAMESPACE}")
+}
+
+def helmUninstallKafka() {
+  helmUninstall("${KAFKA_CHART_NAME}", "${NAMESPACE}")
+}
+
+def helmUninstallNuxeo() {
+  helmUninstall("${NUXEO_CHART_NAME}", "${NAMESPACE}")
+}
+
+def helmGenerateValues() {
+  sh """
+    for valuesFile in ${HELM_VALUES_DIR}/*.yaml; do
+      USAGE=${USAGE} envsubst < \$valuesFile > \$valuesFile~gen
+    done
+  """
+}
+
+def rolloutStatus(kind, name, timeout, namespace) {
+  sh """
+    kubectl rollout status ${kind} ${name} \
+      --timeout=${timeout} \
+      --namespace=${namespace}
+  """
+}
+
+def rolloutStatusMongoDB() {
+  rolloutStatus('deployment', "${MONGODB_CHART_NAME}", "${ROLLOUT_STATUS_TIMEOUT}", "${NAMESPACE}")
+}
+
+def rolloutStatusElasticsearch() {
+  rolloutStatus('statefulset', "${ELASTICSEARCH_CHART_NAME}-master", "${ROLLOUT_STATUS_TIMEOUT}", "${NAMESPACE}")
+}
+
+def rolloutStatusKafka() {
+  rolloutStatus('statefulset', "${KAFKA_CHART_NAME}", "${ROLLOUT_STATUS_TIMEOUT}", "${NAMESPACE}")
+}
+
+def rolloutStatusNuxeo() {
+  rolloutStatus('deployment', "${NUXEO_CHART_NAME}", "${ROLLOUT_STATUS_TIMEOUT}", "${NAMESPACE}")
+}
+
 pipeline {
 
   agent {
@@ -39,13 +132,25 @@ pipeline {
   }
 
   environment {
-    HELM_CHART_REPOSITORY_NAME = 'local-jenkins-x'
-    HELM_CHART_REPOSITORY_URL = 'http://jenkins-x-chartmuseum:8080'
-    HELM_CHART_NUXEO = 'nuxeo'
-    HELM_RELEASE_NUXEO = 'rest-api-tests'
-    NAMESPACE_NUXEO = "nuxeo-platform-rest-api-tests-${BUILD_NUMBER}"
-    SERVICE_NUXEO = "${HELM_RELEASE_NUXEO}-${HELM_CHART_NUXEO}"
-    SERVICE_DOMAIN = ".${NAMESPACE_NUXEO}.svc.cluster.local"
+    BITNAMI_CHART_REPOSITORY_NAME = 'bitnami'
+    BITNAMI_CHART_REPOSITORY_URL = 'https://charts.bitnami.com/bitnami'
+    ELASTIC_CHART_REPOSITORY_NAME = 'elastic'
+    ELASTIC_CHART_REPOSITORY_URL = 'https://helm.elastic.co/'
+    NUXEO_CHART_REPOSITORY_NAME = 'nuxeo'
+    NUXEO_CHART_REPOSITORY_URL = 'https://chartmuseum.platform.dev.nuxeo.com/'
+    MONGODB_CHART_NAME = 'mongodb'
+    MONGODB_CHART_VERSION = '7.14.2'
+    ELASTICSEARCH_CHART_NAME = 'elasticsearch'
+    ELASTICSEARCH_CHART_VERSION = '7.9.2'
+    KAFKA_CHART_NAME = 'kafka'
+    KAFKA_CHART_VERSION = '11.8.8'
+    NUXEO_CHART_NAME = 'nuxeo'
+    NUXEO_CHART_VERSION = '~2.0.0'
+    HELM_VALUES_DIR = 'helm'
+    NAMESPACE = "nuxeo-rest-api-tests-$BRANCH_NAME-$BUILD_NUMBER".toLowerCase()
+    USAGE = 'rest-api-tests'
+    ROLLOUT_STATUS_TIMEOUT = '5m'
+    SERVICE_DOMAIN = ".${NAMESPACE}.svc.cluster.local"
   }
 
   stages {
@@ -96,31 +201,34 @@ pipeline {
       steps {
         setGitHubBuildStatus('test', 'Run REST API tests', 'PENDING')
         container('nodejs') {
-          withEnv(["NUXEO_SERVER_URL=http://${SERVICE_NUXEO}${SERVICE_DOMAIN}/nuxeo"]) {
+          withEnv(["NUXEO_SERVER_URL=http://${NUXEO_CHART_NAME}${SERVICE_DOMAIN}/nuxeo"]) {
             echo """
             -------------------------------------------------------
             Run REST API tests against nuxeo/mongodb/elasticsearch
             -------------------------------------------------------"""
 
-            // initialize Helm without installing Tiller
-            sh 'helm init --client-only'
+            echo 'Create test namespace'
+            sh "kubectl create namespace ${NAMESPACE}"
 
-            // add local chart repository
-            sh "helm repo add ${HELM_CHART_REPOSITORY_NAME} ${HELM_CHART_REPOSITORY_URL}"
+            echo 'Add chart repositories'
+            helmAddBitnamiRepository()
+            helmAddElasticRepository()
+            helmAddNuxeoRepository()
 
-            // install the nuxeo chart into a dedicated namespace that will be cleaned up afterwards
-            // use 'jx step helm install' to avoid 'Error: could not find tiller' when running 'helm install'
-            sh """
-              jx step helm install ${HELM_CHART_REPOSITORY_NAME}/${HELM_CHART_NUXEO} \
-                --name ${HELM_RELEASE_NUXEO} \
-                --set tags.mongodb=true \
-                --set tags.elasticsearch=true \
-                --set nuxeo.image.tag=11.x \
-                --namespace ${NAMESPACE_NUXEO}
-              """
+            echo 'Substitute environment variables in chart values'
+            helmGenerateValues()
 
-            // check nuxeo chart deployment status
-            sh "kubectl rollout status deployment ${SERVICE_NUXEO} --namespace ${NAMESPACE_NUXEO}"
+            echo 'Install external service releases'
+            helmInstallMongoDB()
+            helmInstallElasticsearch()
+            helmInstallKafka()
+            rolloutStatusMongoDB()
+            rolloutStatusElasticsearch()
+            rolloutStatusKafka()
+
+            echo 'Install nuxeo test release'
+            helmInstallNuxeo()
+            rolloutStatusNuxeo()
 
             echo """
             ------------------
@@ -137,22 +245,29 @@ pipeline {
               try {
                 // archive Nuxeo server logs
                 def nuxeoPod = sh(
-                  script: "kubectl get pod -n ${NAMESPACE_NUXEO} -o custom-columns=NAME:.metadata.name | grep ${SERVICE_NUXEO}",
+                  script: "kubectl get pod -n ${NAMESPACE} -o custom-columns=NAME:.metadata.name | grep ${NUXEO_CHART_NAME}",
                   returnStdout: true
                 ).trim()
                 if (nuxeoPod) {
                   def logFile = 'server.log'
-                  sh "kubectl cp ${NAMESPACE_NUXEO}/${nuxeoPod}:/var/log/nuxeo/${logFile} ${logFile}"
+                  sh "kubectl cp ${NAMESPACE}/${nuxeoPod}:/var/log/nuxeo/${logFile} ${logFile}"
                   archiveArtifacts "${logFile}"
                 } else {
-                  echo "No pod found in namespace ${NAMESPACE_NUXEO} for the ${SERVICE_NUXEO} service. Won't archive any artifact."
+                  echo "No ${NUXEO_CHART_NAME} pod found in namespace ${NAMESPACE}. Won't archive any artifact."
                 }
               } catch (e) {
                 echo 'An error occurred while trying to archive artifacts.'
                 throw e
               } finally {
-                // clean up namespace
-                sh "kubectl delete namespace ${NAMESPACE_NUXEO} --ignore-not-found=true"
+                try {
+                  helmUninstallNuxeo()
+                  helmUninstallElasticsearch()
+                  helmUninstallKafka()
+                  helmUninstallMongoDB()
+                } finally {
+                  // clean up namespace
+                  sh "kubectl delete namespace ${NAMESPACE} --ignore-not-found=true"
+                }
               }
             }
           }

@@ -1,0 +1,30 @@
+image:
+  tag: 11.x
+podLabels:
+  branch: "$BRANCH_NAME"
+  team: platform
+  resource: pod
+  usage: "$USAGE"
+  scm-ref: "$GIT_COMMIT"
+service:
+  labels:
+    branch: "$BRANCH_NAME"
+    team: platform
+    resource: service
+    usage: "$USAGE"
+mongodb:
+  enabled: true
+  host: "mongodb.$NAMESPACE.svc.cluster.local"
+elasticsearch:
+  enabled: true
+  host: "elasticsearch-master.$NAMESPACE.svc.cluster.local"
+kafka:
+  enabled: true
+  host: "kafka.$NAMESPACE.svc.cluster.local"
+nodeSelector:
+  team: platform
+tolerations:
+- effect: NoSchedule
+  key: team
+  operator: Equal
+  value: platform
