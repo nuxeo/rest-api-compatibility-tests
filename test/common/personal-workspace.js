@@ -21,6 +21,15 @@ const createPersonalWorkspace = async (username) => {
       type: 'Workspace',
     },
   });
+  await request.strictPost(`/automation/Document.AddPermission`, {
+    body: {
+      input: `doc:${USER_WORKSPACES_PATH}/${username}`,
+      params: {
+        users: [username],
+        permission: 'Everything',
+      },
+    },
+  });
   return body.uid;
 };
 
