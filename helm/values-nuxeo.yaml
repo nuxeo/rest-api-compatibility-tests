@@ -1,5 +1,9 @@
 image:
-  tag: 11.x
+  repository: "$NUXEO_DOCKER_REPOSITORY"
+  tag: "$NUXEO_VERSION"
+  pullPolicy: Always
+  pullSecrets:
+  - name: kubernetes-docker-cfg
 podLabels:
   branch: "$BRANCH_NAME"
   team: platform
