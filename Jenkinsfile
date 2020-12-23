@@ -26,10 +26,15 @@ properties([
 void setGitHubBuildStatus(String context, String message, String state) {
   step([
     $class: 'GitHubCommitStatusSetter',
-    reposSource: [$class: 'ManuallyEnteredRepositorySource', url: repositoryUrl],
+    reposSource: [$class: 'ManuallyEnteredRepositorySource', url: "${GITHUB_STATUS_REPOSITORY_URL}"],
+    commitShaSource: [$class: 'ManuallyEnteredShaSource', sha: "${GITHUB_STATUS_SHA}"],
     contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: context],
     statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: message, state: state]]],
   ])
+}
+
+def isPullRequest() {
+  return BRANCH_NAME =~ /PR-.*/
 }
 
 def helmAddRepository(name, url) {
@@ -125,10 +130,27 @@ def rolloutStatusNuxeo() {
   rolloutStatus('deployment', "${NUXEO_CHART_NAME}", "${ROLLOUT_STATUS_TIMEOUT}", "${NAMESPACE}")
 }
 
+def isTriggered() {
+  return !currentBuild.upstreamBuilds.isEmpty()
+}
+
+def isTriggeredByNuxeoPR() {
+  return isTriggered() && params.NUXEO_VERSION?.trim()
+}
+
+def upstreamJobName = isTriggered() ? currentBuild.upstreamBuilds[0].getFullProjectName() : null
+def upstreamBuildNumber = isTriggered() ? currentBuild.upstreamBuilds[0].getNumber() : null
+
 pipeline {
 
   agent {
     label "jenkins-nodejs"
+  }
+
+  parameters {
+    string(name: 'NUXEO_VERSION', defaultValue: '', description: 'Version of the Nuxeo server image, defaults to 11.x.')
+    string(name: 'NUXEO_REPOSITORY', defaultValue: '', description: 'GitHub repository of the nuxeo project.')
+    string(name: 'NUXEO_SHA', defaultValue: '', description: 'Git commit sha of the nuxeo/nuxeo upstream build.')
   }
 
   environment {
@@ -146,11 +168,16 @@ pipeline {
     KAFKA_CHART_VERSION = '11.8.8'
     NUXEO_CHART_NAME = 'nuxeo'
     NUXEO_CHART_VERSION = '~2.0.0'
+    NUXEO_DOCKER_REPOSITORY = "${isTriggeredByNuxeoPR() ? DOCKER_REGISTRY : PUBLIC_DOCKER_REGISTRY}/nuxeo/nuxeo"
+    NUXEO_VERSION = "${params.NUXEO_VERSION?.trim() ? params.NUXEO_VERSION : '11.x'}"
     HELM_VALUES_DIR = 'helm'
     NAMESPACE = "nuxeo-rest-api-tests-$BRANCH_NAME-$BUILD_NUMBER".toLowerCase()
     USAGE = 'rest-api-tests'
     ROLLOUT_STATUS_TIMEOUT = '5m'
     SERVICE_DOMAIN = ".${NAMESPACE}.svc.cluster.local"
+    GITHUB_STATUS_REPOSITORY_URL = "${isTriggered() ? params.NUXEO_REPOSITORY : repositoryUrl}"
+    GITHUB_STATUS_SHA = "${isTriggered() ? params.NUXEO_SHA : GIT_COMMIT}"
+    SLACK_CHANNEL = 'platform-notifs'
   }
 
   stages {
@@ -171,44 +198,102 @@ pipeline {
       }
     }
 
-    stage('Yarn/ESLint') {
+    stage('Build info') {
       steps {
-        setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'PENDING')
-        container('nodejs') {
-          echo """
-          ----------------------------------------
-          Install Yarn dependencies and run ESLint
-          ----------------------------------------"""
-          script {
+        script {
+          def buildInfo = """
+            ----------------------------------------
+            Build information
+            ----------------------------------------
+
+            Branch: ${BRANCH_NAME}
+          """
+          if (isTriggered()) {
+            buildInfo += """
+            Triggered by: ${upstreamJobName} #${upstreamBuildNumber}
+            """
+            if (isTriggeredByNuxeoPR()) {
+              buildInfo += """
+            With parameter NUXEO_VERSION: ${params.NUXEO_VERSION}
+              """
+            }
+          } else {
+            buildInfo += """
+            Not triggered by an upstream job.
+            """
+          }
+          buildInfo += """
+            GITHUB_STATUS_REPOSITORY_URL: ${GITHUB_STATUS_REPOSITORY_URL}
+            GITHUB_STATUS_SHA: ${GITHUB_STATUS_SHA}
+          """
+          echo buildInfo
+        }
+      }
+    }
+
+    stage('Yarn/ESLint') {
+      // set GitHub status check only on the REST API tests repository, not on the nuxeo repository when triggered
+      steps {
+        script {
+          if (!isTriggered()) {
+            setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'PENDING')
+          }
+          container('nodejs') {
+            echo """
+            ----------------------------------------
+            Install Yarn dependencies and run ESLint
+            ----------------------------------------"""
             def nodeVersion = sh(script: 'node -v', returnStdout: true).trim()
             echo "node version: ${nodeVersion}"
+            sh 'yarn'
+            sh 'yarn lint'
           }
-          sh 'yarn'
-          sh 'yarn lint'
         }
       }
       post {
         success {
-          setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'SUCCESS')
+          script {
+            if (!isTriggered()) {
+              setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'SUCCESS')
+            }
+          }
         }
         failure {
-          setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'FAILURE')
+          script {
+            if (!isTriggered()) {
+              setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'FAILURE')
+            }
+          }
         }
       }
     }
 
     stage('Run REST API tests') {
+      // set GitHub status checks on the REST API tests repository or on the nuxeo repository when triggered
       steps {
-        setGitHubBuildStatus('test', 'Run REST API tests', 'PENDING')
+        setGitHubBuildStatus('restapitests', 'Run REST API tests', 'PENDING')
         container('nodejs') {
           withEnv(["NUXEO_SERVER_URL=http://${NUXEO_CHART_NAME}${SERVICE_DOMAIN}/nuxeo"]) {
             echo """
             -------------------------------------------------------
-            Run REST API tests against nuxeo/mongodb/elasticsearch
+            Run REST API tests against:
+              - ${NUXEO_DOCKER_REPOSITORY}:${NUXEO_VERSION}
+              - MongoDB
+              - Elasticsearch
+              - Kafka
             -------------------------------------------------------"""
 
             echo 'Create test namespace'
             sh "kubectl create namespace ${NAMESPACE}"
+
+            echo 'Copy image pull secret to test namespace'
+            sh "kubectl --namespace=platform get secret kubernetes-docker-cfg -ojsonpath='{.data.\\.dockerconfigjson}' | base64 --decode > /tmp/config.json"
+            sh """
+              kubectl create secret generic kubernetes-docker-cfg \
+                --namespace=${NAMESPACE} \
+                --from-file=.dockerconfigjson=/tmp/config.json \
+                --type=kubernetes.io/dockerconfigjson --dry-run -o yaml | kubectl apply -f -
+            """
 
             echo 'Add chart repositories'
             helmAddBitnamiRepository()
@@ -273,10 +358,10 @@ pipeline {
           }
         }
         success {
-          setGitHubBuildStatus('test', 'Run REST API tests', 'SUCCESS')
+          setGitHubBuildStatus('restapitests', 'Run REST API tests', 'SUCCESS')
         }
         failure {
-          setGitHubBuildStatus('test', 'Run REST API tests', 'FAILURE')
+          setGitHubBuildStatus('restapitests', 'Run REST API tests', 'FAILURE')
         }
       }
     }
@@ -285,8 +370,29 @@ pipeline {
   post {
     always {
       script {
-        if (BRANCH_NAME == 'master') {
+        if (isTriggered()) {
+          currentBuild.description = "Upstream: ${upstreamJobName} #${upstreamBuildNumber}"
+        }
+        if (!isTriggered() && !isPullRequest()) {
           step([$class: 'JiraIssueUpdater', issueSelector: [$class: 'DefaultIssueSelector'], scm: scm])
+        }
+      }
+    }
+    success {
+      script {
+        if (!isPullRequest() && !isTriggeredByNuxeoPR() && env.DRY_RUN != 'true') {
+          if (!hudson.model.Result.SUCCESS.toString().equals(currentBuild.getPreviousBuild()?.getResult())) {
+            def triggeredBy = isTriggered() ? ", triggered by ${upstreamJobName} #${upstreamBuildNumber}" : ''
+            slackSend(channel: "${SLACK_CHANNEL}", color: 'good', message: "Successfully built nuxeo/rest-api-compatibility-tests ${BRANCH_NAME} #${BUILD_NUMBER}${triggeredBy}: ${BUILD_URL}")
+          }
+        }
+      }
+    }
+    unsuccessful {
+      script {
+        if (!isPullRequest() && !isTriggeredByNuxeoPR() && env.DRY_RUN != 'true') {
+          def triggeredBy = isTriggered() ? ", triggered by ${upstreamJobName} #${upstreamBuildNumber}" : ''
+          slackSend(channel: "${SLACK_CHANNEL}", color: 'danger', message: "Failed to build nuxeo/rest-api-compatibility-tests ${BRANCH_NAME} #${BUILD_NUMBER}${triggeredBy}: ${BUILD_URL}")
         }
       }
     }

@@ -84,7 +84,7 @@ test/v1/...
 
 ## CI/CD
 
-This set of tests is executed in a [continuous integration pipeline](https://jenkins.platform.dev.nuxeo.com/job/nuxeo/job/rest-api-compatibility-tests/) against a Nuxeo Platform configured as following:
+This set of tests is executed in a [multibranch pipeline](https://jenkins.platform.dev.nuxeo.com/job/nuxeo/job/rest-api-compatibility-tests/) against a Nuxeo server configured as following:
 
 - Docker image: `nuxeo/nuxeo:11.x`
 - MongoDB
@@ -92,4 +92,9 @@ This set of tests is executed in a [continuous integration pipeline](https://jen
 
 The build fails if at least one test fails.
 
-This allows continuous delivery of the Nuxeo Platform's master branch in terms of REST API.
+This job is also triggered by the [nuxeo/nuxeo](https://jenkins.platform.dev.nuxeo.com/job/nuxeo/job/nuxeo/) multibranch pipeline:
+
+- On pull requests, to run the REST API tests against the Nuxeo image freshly built from the related branch, and set a GitHub status check on the pull request.
+- On the `master` branch, to run the REST API tests against the `nuxeo/nuxeo:11.x` image freshly built from the `master` branch.
+
+This adds a quality gate for the continuous delivery of the Nuxeo server.
