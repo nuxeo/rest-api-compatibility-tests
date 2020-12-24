@@ -313,7 +313,19 @@ pipeline {
 
             echo 'Install nuxeo test release'
             helmInstallNuxeo()
-            rolloutStatusNuxeo()
+            script {
+              try {
+                rolloutStatusNuxeo()
+              } catch (e) {
+                sh """
+                  kubectl --namespace=${NAMESPACE} get event --sort-by .lastTimestamp
+                  kubectl --namespace=${NAMESPACE} get all,configmaps,secrets
+                  kubectl --namespace=${NAMESPACE} describe pod --selector=app=${NUXEO_CHART_NAME}
+                  kubectl --namespace=${NAMESPACE} logs --selector=app=${NUXEO_CHART_NAME} --tail=1000
+                """
+                throw e
+              }
+            }
 
             echo """
             ------------------
@@ -330,7 +342,7 @@ pipeline {
               try {
                 // archive Nuxeo server logs
                 def nuxeoPod = sh(
-                  script: "kubectl get pod -n ${NAMESPACE} -o custom-columns=NAME:.metadata.name | grep ${NUXEO_CHART_NAME}",
+                  script: "kubectl --namespace=${NAMESPACE} get pod --selector=app=${NUXEO_CHART_NAME} --output=custom-columns=NAME:.metadata.name --no-headers",
                   returnStdout: true
                 ).trim()
                 if (nuxeoPod) {
