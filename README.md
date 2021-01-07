@@ -46,21 +46,27 @@ To run the tests, make sure that a Nuxeo server is up and available at `http://l
 yarn test
 ```
 
-To check linting with ESLint and code style with Prettier:
+To run a specific test:
 
 ```shell
-yarn lint
+yarn test --runTestsByPath test/v1/user/user-post.js
 ```
 
-To format with Prettier:
+To run a set of tests matching a given pattern:
 
 ```shell
-yarn format
+yarn test user-post
+```
+
+To display the debug information of the `request` module while running the tests:
+
+```shell
+NODE_DEBUG=request yarn test
 ```
 
 To debug the tests in VS Code, just start the **Debug Jest Tests** debug configuration.
 
-To debug some specific tests, you can use these options in [launch.json](.vscode/launch.json):
+Then, to debug some specific tests, you can use these options in [launch.json](.vscode/launch.json):
 
 ```json
 "runtimeArgs": [
@@ -80,6 +86,20 @@ test/v1/user/user-delete.js
 test/v1/user/user-enrichers.js
 test/v1/user/...
 test/v1/...
+```
+
+## Lint/Format
+
+To check linting with ESLint and code style with Prettier:
+
+```shell
+yarn lint
+```
+
+To format with Prettier:
+
+```shell
+yarn format
 ```
 
 ## CI/CD
