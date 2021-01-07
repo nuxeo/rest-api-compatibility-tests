@@ -135,7 +135,13 @@ def isTriggered() {
 }
 
 def isTriggeredByNuxeoPR() {
-  return isTriggered() && params.NUXEO_VERSION?.trim()
+  // rely on availability of the NUXEO_REPOSITORY and NUXEO_SHA parameters to know if the build was triggered by a
+  // pull request on the upstream repository
+  return isTriggered() && params.NUXEO_REPOSITORY?.trim() && params.NUXEO_SHA?.trim()
+}
+
+def mustSetGitHubStatus() {
+  return !isTriggered() || isTriggeredByNuxeoPR()
 }
 
 def upstreamJobName = isTriggered() ? currentBuild.upstreamBuilds[0].getFullProjectName() : null
@@ -148,7 +154,7 @@ pipeline {
   }
 
   parameters {
-    string(name: 'NUXEO_VERSION', defaultValue: '', description: 'Version of the Nuxeo server image, defaults to 11.x.')
+    string(name: 'NUXEO_VERSION', defaultValue: '11.x', description: 'Version of the Nuxeo server image, defaults to 11.x.')
     string(name: 'NUXEO_REPOSITORY', defaultValue: '', description: 'GitHub repository of the nuxeo project.')
     string(name: 'NUXEO_SHA', defaultValue: '', description: 'Git commit sha of the nuxeo/nuxeo upstream build.')
   }
@@ -168,15 +174,15 @@ pipeline {
     KAFKA_CHART_VERSION = '11.8.8'
     NUXEO_CHART_NAME = 'nuxeo'
     NUXEO_CHART_VERSION = '~2.0.0'
-    NUXEO_DOCKER_REPOSITORY = "${isTriggeredByNuxeoPR() ? DOCKER_REGISTRY : PUBLIC_DOCKER_REGISTRY}/nuxeo/nuxeo"
-    NUXEO_VERSION = "${params.NUXEO_VERSION?.trim() ? params.NUXEO_VERSION : '11.x'}"
+    NUXEO_DOCKER_REPOSITORY = "${isTriggered() ? DOCKER_REGISTRY : PUBLIC_DOCKER_REGISTRY}/nuxeo/nuxeo"
+    NUXEO_VERSION = "${params.NUXEO_VERSION}"
     HELM_VALUES_DIR = 'helm'
     NAMESPACE = "nuxeo-rest-api-tests-$BRANCH_NAME-$BUILD_NUMBER".toLowerCase()
     USAGE = 'rest-api-tests'
     ROLLOUT_STATUS_TIMEOUT = '5m'
     SERVICE_DOMAIN = ".${NAMESPACE}.svc.cluster.local"
-    GITHUB_STATUS_REPOSITORY_URL = "${isTriggered() ? params.NUXEO_REPOSITORY : repositoryUrl}"
-    GITHUB_STATUS_SHA = "${isTriggered() ? params.NUXEO_SHA : GIT_COMMIT}"
+    GITHUB_STATUS_REPOSITORY_URL = "${isTriggeredByNuxeoPR() ? params.NUXEO_REPOSITORY : repositoryUrl}"
+    GITHUB_STATUS_SHA = "${isTriggeredByNuxeoPR() ? params.NUXEO_SHA : GIT_COMMIT}"
     SLACK_CHANNEL = 'platform-notifs'
   }
 
@@ -211,21 +217,19 @@ pipeline {
           if (isTriggered()) {
             buildInfo += """
             Triggered by: ${upstreamJobName} #${upstreamBuildNumber}
-            """
-            if (isTriggeredByNuxeoPR()) {
-              buildInfo += """
             With parameter NUXEO_VERSION: ${params.NUXEO_VERSION}
-              """
-            }
+            """
           } else {
             buildInfo += """
             Not triggered by an upstream job.
             """
           }
-          buildInfo += """
+          if (mustSetGitHubStatus()) {
+            buildInfo += """
             GITHUB_STATUS_REPOSITORY_URL: ${GITHUB_STATUS_REPOSITORY_URL}
             GITHUB_STATUS_SHA: ${GITHUB_STATUS_SHA}
-          """
+            """
+          }
           echo buildInfo
         }
       }
@@ -269,51 +273,53 @@ pipeline {
     }
 
     stage('Run REST API tests') {
-      // set GitHub status checks on the REST API tests repository or on the nuxeo repository when triggered
+      // set GitHub status checks on the REST API tests repository or on the nuxeo repository when triggered by a pull request
       steps {
-        setGitHubBuildStatus('restapitests', 'Run REST API tests', 'PENDING')
-        container('nodejs') {
-          withEnv(["NUXEO_SERVER_URL=http://${NUXEO_CHART_NAME}${SERVICE_DOMAIN}/nuxeo"]) {
-            echo """
-            -------------------------------------------------------
-            Run REST API tests against:
-              - ${NUXEO_DOCKER_REPOSITORY}:${NUXEO_VERSION}
-              - MongoDB
-              - Elasticsearch
-              - Kafka
-            -------------------------------------------------------"""
+        script {
+          if (mustSetGitHubStatus()) {
+            setGitHubBuildStatus('restapitests', 'Run REST API tests', 'PENDING')
+          }
+          container('nodejs') {
+            withEnv(["NUXEO_SERVER_URL=http://${NUXEO_CHART_NAME}${SERVICE_DOMAIN}/nuxeo"]) {
+              echo """
+              -------------------------------------------------------
+              Run REST API tests against:
+                - ${NUXEO_DOCKER_REPOSITORY}:${NUXEO_VERSION}
+                - MongoDB
+                - Elasticsearch
+                - Kafka
+              -------------------------------------------------------"""
 
-            echo 'Create test namespace'
-            sh "kubectl create namespace ${NAMESPACE}"
+              echo 'Create test namespace'
+              sh "kubectl create namespace ${NAMESPACE}"
 
-            echo 'Copy image pull secret to test namespace'
-            sh "kubectl --namespace=platform get secret kubernetes-docker-cfg -ojsonpath='{.data.\\.dockerconfigjson}' | base64 --decode > /tmp/config.json"
-            sh """
-              kubectl create secret generic kubernetes-docker-cfg \
-                --namespace=${NAMESPACE} \
-                --from-file=.dockerconfigjson=/tmp/config.json \
-                --type=kubernetes.io/dockerconfigjson --dry-run -o yaml | kubectl apply -f -
-            """
+              echo 'Copy image pull secret to test namespace'
+              sh "kubectl --namespace=platform get secret kubernetes-docker-cfg -ojsonpath='{.data.\\.dockerconfigjson}' | base64 --decode > /tmp/config.json"
+              sh """
+                kubectl create secret generic kubernetes-docker-cfg \
+                  --namespace=${NAMESPACE} \
+                  --from-file=.dockerconfigjson=/tmp/config.json \
+                  --type=kubernetes.io/dockerconfigjson --dry-run -o yaml | kubectl apply -f -
+              """
 
-            echo 'Add chart repositories'
-            helmAddBitnamiRepository()
-            helmAddElasticRepository()
-            helmAddNuxeoRepository()
+              echo 'Add chart repositories'
+              helmAddBitnamiRepository()
+              helmAddElasticRepository()
+              helmAddNuxeoRepository()
 
-            echo 'Substitute environment variables in chart values'
-            helmGenerateValues()
+              echo 'Substitute environment variables in chart values'
+              helmGenerateValues()
 
-            echo 'Install external service releases'
-            helmInstallMongoDB()
-            helmInstallElasticsearch()
-            helmInstallKafka()
-            rolloutStatusMongoDB()
-            rolloutStatusElasticsearch()
-            rolloutStatusKafka()
+              echo 'Install external service releases'
+              helmInstallMongoDB()
+              helmInstallElasticsearch()
+              helmInstallKafka()
+              rolloutStatusMongoDB()
+              rolloutStatusElasticsearch()
+              rolloutStatusKafka()
 
-            echo 'Install nuxeo test release'
-            helmInstallNuxeo()
-            script {
+              echo 'Install nuxeo test release'
+              helmInstallNuxeo()
               try {
                 rolloutStatusNuxeo()
               } catch (e) {
@@ -325,13 +331,13 @@ pipeline {
                 """
                 throw e
               }
-            }
 
-            echo """
-            ------------------
-            Run REST API tests
-            ------------------"""
-            sh 'yarn test'
+              echo """
+              ------------------
+              Run REST API tests
+              ------------------"""
+              sh 'yarn test'
+            }
           }
         }
       }
@@ -370,10 +376,18 @@ pipeline {
           }
         }
         success {
-          setGitHubBuildStatus('restapitests', 'Run REST API tests', 'SUCCESS')
+          script {
+            if (mustSetGitHubStatus()) {
+              setGitHubBuildStatus('restapitests', 'Run REST API tests', 'SUCCESS')
+            }
+          }
         }
         failure {
-          setGitHubBuildStatus('restapitests', 'Run REST API tests', 'FAILURE')
+          script {
+            if (mustSetGitHubStatus()) {
+              setGitHubBuildStatus('restapitests', 'Run REST API tests', 'FAILURE')
+            }
+          }
         }
       }
     }
