@@ -154,9 +154,9 @@ pipeline {
   }
 
   parameters {
-    string(name: 'NUXEO_VERSION', defaultValue: '11.x', description: 'Version of the Nuxeo server image, defaults to 11.x.')
+    string(name: 'NUXEO_VERSION', defaultValue: '2021.x', description: 'Version of the Nuxeo server image, defaults to 2021.x.')
     string(name: 'NUXEO_REPOSITORY', defaultValue: '', description: 'GitHub repository of the nuxeo project.')
-    string(name: 'NUXEO_SHA', defaultValue: '', description: 'Git commit sha of the nuxeo/nuxeo upstream build.')
+    string(name: 'NUXEO_SHA', defaultValue: '', description: 'Git commit sha of the nuxeo/lts/nuxeo upstream build.')
   }
 
   environment {
@@ -174,7 +174,7 @@ pipeline {
     KAFKA_CHART_VERSION = '11.8.8'
     NUXEO_CHART_NAME = 'nuxeo'
     NUXEO_CHART_VERSION = '~2.0.0'
-    NUXEO_DOCKER_REPOSITORY = "${isTriggered() ? DOCKER_REGISTRY : PUBLIC_DOCKER_REGISTRY}/nuxeo/nuxeo"
+    NUXEO_DOCKER_REPOSITORY = "${isTriggered() ? DOCKER_REGISTRY : PRIVATE_DOCKER_REGISTRY}/nuxeo/nuxeo"
     NUXEO_VERSION = "${params.NUXEO_VERSION}"
     HELM_VALUES_DIR = 'helm'
     NAMESPACE = "nuxeo-rest-api-tests-$BRANCH_NAME-$BUILD_NUMBER".toLowerCase()

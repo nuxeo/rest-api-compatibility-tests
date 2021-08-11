@@ -6,7 +6,7 @@
 
 ## Purpose
 
-This project allows to validate the REST API versions that are supported in the [master branch](https://github.com/nuxeo/nuxeo) of the Nuxeo Platform.
+This project allows to validate the REST API versions that are supported in the [2021 branch](https://github.com/nuxeo/nuxeo-lts) of the Nuxeo Platform.
 
 For each REST API version, we need to guarantee the following assertion:
 
@@ -106,15 +106,15 @@ yarn format
 
 This set of tests is executed in a [multibranch pipeline](https://jenkins.platform.dev.nuxeo.com/job/nuxeo/job/rest-api-compatibility-tests/) against a Nuxeo server configured as following:
 
-- Docker image: `nuxeo/nuxeo:11.x`
+- Docker image: `docker-private.packages.nuxeo.com/nuxeo/nuxeo:2021.x`
 - MongoDB
 - Elasticsearch
 
 The build fails if at least one test fails.
 
-This job is also triggered by the [nuxeo/nuxeo](https://jenkins.platform.dev.nuxeo.com/job/nuxeo/job/nuxeo/) multibranch pipeline:
+This job is also triggered by the [nuxeo/lts/nuxeo](https://jenkins.platform.dev.nuxeo.com/job/nuxeo/job/lts/job/nuxeo/) multibranch pipeline:
 
 - On pull requests, to run the REST API tests against the Nuxeo image freshly built from the related branch, and set a GitHub status check on the pull request.
-- On the `master` branch, to run the REST API tests against the `nuxeo/nuxeo:11.x` image freshly built from the `master` branch.
+- On the `2021` branch, to run the REST API tests against the `docker-private.packages.nuxeo.com/nuxeo/nuxeo:2021.x` image freshly built from the `2021` branch.
 
 This adds a quality gate for the continuous delivery of the Nuxeo server.
