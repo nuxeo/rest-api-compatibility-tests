@@ -130,22 +130,36 @@ def rolloutStatusNuxeo() {
   rolloutStatus('deployment', "${NUXEO_CHART_NAME}", "${ROLLOUT_STATUS_TIMEOUT}", "${NAMESPACE}")
 }
 
-def isTriggered() {
+def hasUpstream() {
   return !currentBuild.upstreamBuilds.isEmpty()
+}
+
+def hasNuxeoVersionParameter() {
+  return params.NUXEO_VERSION?.trim()
+}
+
+def hasNuxeoGitParameters() {
+  return params.NUXEO_REPOSITORY?.trim() && params.NUXEO_SHA?.trim()
+}
+
+def isTriggered() {
+  // rely on availability of the NUXEO_VERSION parameter to know if the build was triggered by a
+  // build of the reference branch on the upstream repository
+  return hasNuxeoVersionParameter()
 }
 
 def isTriggeredByNuxeoPR() {
   // rely on availability of the NUXEO_REPOSITORY and NUXEO_SHA parameters to know if the build was triggered by a
   // pull request on the upstream repository
-  return isTriggered() && params.NUXEO_REPOSITORY?.trim() && params.NUXEO_SHA?.trim()
+  return hasNuxeoGitParameters()
 }
 
 def mustSetGitHubStatus() {
   return !isTriggered() || isTriggeredByNuxeoPR()
 }
 
-def upstreamJobName = isTriggered() ? currentBuild.upstreamBuilds[0].getFullProjectName() : null
-def upstreamBuildNumber = isTriggered() ? currentBuild.upstreamBuilds[0].getNumber() : null
+def upstreamJobName = hasUpstream() ? currentBuild.upstreamBuilds[0].getFullProjectName() : null
+def upstreamBuildNumber = hasUpstream() ? currentBuild.upstreamBuilds[0].getNumber() : null
 
 pipeline {
 
@@ -154,7 +168,7 @@ pipeline {
   }
 
   parameters {
-    string(name: 'NUXEO_VERSION', defaultValue: '2021.x', description: 'Version of the Nuxeo server image, defaults to 2021.x.')
+    string(name: 'NUXEO_VERSION', defaultValue: '', description: 'Version of the Nuxeo server image, defaults to 2021.x.')
     string(name: 'NUXEO_REPOSITORY', defaultValue: '', description: 'GitHub repository of the nuxeo project.')
     string(name: 'NUXEO_SHA', defaultValue: '', description: 'Git commit sha of the nuxeo/lts/nuxeo upstream build.')
   }
@@ -175,7 +189,8 @@ pipeline {
     NUXEO_CHART_NAME = 'nuxeo'
     NUXEO_CHART_VERSION = '~2.0.0'
     NUXEO_DOCKER_REPOSITORY = "${isTriggered() ? DOCKER_REGISTRY : PRIVATE_DOCKER_REGISTRY}/nuxeo/nuxeo"
-    NUXEO_VERSION = "${params.NUXEO_VERSION}"
+    NUXEO_VERSION = "${hasNuxeoVersionParameter() ? params.NUXEO_VERSION : '2021.x'}"
+    NUXEO_LTS_JOB = 'nuxeo/lts/nuxeo'
     HELM_VALUES_DIR = 'helm'
     NAMESPACE = "nuxeo-rest-api-tests-$BRANCH_NAME-$BUILD_NUMBER".toLowerCase()
     USAGE = 'rest-api-tests'
@@ -215,8 +230,16 @@ pipeline {
             Branch: ${BRANCH_NAME}
           """
           if (isTriggered()) {
-            buildInfo += """
+            if (hasUpstream()) {
+              buildInfo += """
             Triggered by: ${upstreamJobName} #${upstreamBuildNumber}
+            """
+            } else {
+              buildInfo += """
+            Originally triggered by a ${NUXEO_LTS_JOB} upstream build.
+            """
+            }
+            buildInfo += """
             With parameter NUXEO_VERSION: ${params.NUXEO_VERSION}
             """
           } else {
@@ -397,7 +420,8 @@ pipeline {
     always {
       script {
         if (isTriggered()) {
-          currentBuild.description = "Upstream: ${upstreamJobName} #${upstreamBuildNumber}"
+          def upstream = hasUpstream() ? "${upstreamJobName} #${upstreamBuildNumber}" : "${NUXEO_LTS_JOB}"
+          currentBuild.description = "Upstream: ${upstream}"
         }
         if (!isTriggered() && !isPullRequest()) {
           step([$class: 'JiraIssueUpdater', issueSelector: [$class: 'DefaultIssueSelector'], scm: scm])
