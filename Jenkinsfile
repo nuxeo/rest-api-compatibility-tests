@@ -175,7 +175,9 @@ pipeline {
 
   environment {
     BITNAMI_CHART_REPOSITORY_NAME = 'bitnami'
-    BITNAMI_CHART_REPOSITORY_URL = 'https://charts.bitnami.com/bitnami'
+    // use a former version of index.yaml from the git repository as Bitnami removed all charts older than 6 months from
+    // the index.yaml descriptor, see https://github.com/bitnami/charts/issues/10539
+    BITNAMI_CHART_REPOSITORY_URL = 'https://raw.githubusercontent.com/bitnami/charts/eb5f9a9513d987b519f0ecd732e7031241c50328/bitnami'
     ELASTIC_CHART_REPOSITORY_NAME = 'elastic'
     ELASTIC_CHART_REPOSITORY_URL = 'https://helm.elastic.co/'
     NUXEO_CHART_REPOSITORY_NAME = 'nuxeo'
