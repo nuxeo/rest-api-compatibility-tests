@@ -1,0 +1,31 @@
+image:
+  repository: {{ env "NUXEO_DOCKER_REPOSITORY" | quote }}
+  tag: {{ env "NUXEO_VERSION" | quote }}
+  pullPolicy: Always
+  pullSecrets:
+  - name: kubernetes-docker-cfg
+podLabels:
+  {{- if (env "BRANCH_NAME") }}
+  branch: {{ env "BRANCH_NAME" | quote }}
+  {{- end }}
+  resource: pod
+  team: platform
+  usage: "rest-api-tests"
+  scm-ref: {{ env "GIT_COMMIT" | quote }}
+service:
+  labels:
+    {{- if (env "BRANCH_NAME") }}
+    branch: {{ env "BRANCH_NAME" | quote }}
+    {{- end }}
+    resource: service
+    team: platform
+    usage: "rest-api-tests"
+mongodb:
+  enabled: true
+  host: "mongodb.{{ .Namespace }}.svc.cluster.local"
+elasticsearch:
+  enabled: true
+  host: "elasticsearch-master.{{ .Namespace }}.svc.cluster.local"
+kafka:
+  enabled: true
+  host: "kafka.{{ .Namespace }}.svc.cluster.local"

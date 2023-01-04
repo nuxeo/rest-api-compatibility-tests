@@ -16,118 +16,12 @@
  * Contributors:
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
+library identifier: "platform-ci-shared-library@v0.0.11"
+
 repositoryUrl = 'https://github.com/nuxeo/rest-api-compatibility-tests/'
 
-properties([
-  [$class: 'GithubProjectProperty', projectUrlStr: repositoryUrl],
-  [$class: 'BuildDiscarderProperty', strategy: [$class: 'LogRotator', daysToKeepStr: '60', numToKeepStr: '60', artifactNumToKeepStr: '5']],
-])
-
 void setGitHubBuildStatus(String context, String message, String state) {
-  step([
-    $class: 'GitHubCommitStatusSetter',
-    reposSource: [$class: 'ManuallyEnteredRepositorySource', url: "${GITHUB_STATUS_REPOSITORY_URL}"],
-    commitShaSource: [$class: 'ManuallyEnteredShaSource', sha: "${GITHUB_STATUS_SHA}"],
-    contextSource: [$class: 'ManuallyEnteredCommitContextSource', context: context],
-    statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: message, state: state]]],
-  ])
-}
-
-def isPullRequest() {
-  return BRANCH_NAME =~ /PR-.*/
-}
-
-def helmAddRepository(name, url) {
-  sh "helm3 repo add ${name} ${url}"
-}
-
-def helmAddBitnamiRepository() {
-  helmAddRepository("${BITNAMI_CHART_REPOSITORY_NAME}", "${BITNAMI_CHART_REPOSITORY_URL}")
-}
-
-def helmAddElasticRepository() {
-  helmAddRepository("${ELASTIC_CHART_REPOSITORY_NAME}", "${ELASTIC_CHART_REPOSITORY_URL}")
-}
-
-def helmAddNuxeoRepository() {
-  helmAddRepository("${NUXEO_CHART_REPOSITORY_NAME}", "${NUXEO_CHART_REPOSITORY_URL}")
-}
-
-def helmInstall(release, repository, chart, version, namespace, values) {
-  sh """
-    helm3 install ${release} ${repository}/${chart} \
-      --version=${version} \
-      --namespace=${namespace} \
-      --values=${values}
-  """
-}
-
-def helmInstallMongoDB() {
-  helmInstall("${MONGODB_CHART_NAME}", "${BITNAMI_CHART_REPOSITORY_NAME}", "${MONGODB_CHART_NAME}", "${MONGODB_CHART_VERSION}", "${NAMESPACE}", "${HELM_VALUES_DIR}/values-mongodb.yaml~gen")
-}
-
-def helmInstallElasticsearch() {
-  helmInstall("${ELASTICSEARCH_CHART_NAME}", "${ELASTIC_CHART_REPOSITORY_NAME}", "${ELASTICSEARCH_CHART_NAME}", "${ELASTICSEARCH_CHART_VERSION}", "${NAMESPACE}", "${HELM_VALUES_DIR}/values-elasticsearch.yaml~gen")
-}
-
-def helmInstallKafka() {
-  helmInstall("${KAFKA_CHART_NAME}", "${BITNAMI_CHART_REPOSITORY_NAME}", "${KAFKA_CHART_NAME}", "${KAFKA_CHART_VERSION}", "${NAMESPACE}", "${HELM_VALUES_DIR}/values-kafka.yaml~gen")
-}
-
-def helmInstallNuxeo() {
-  helmInstall("${NUXEO_CHART_NAME}", "${NUXEO_CHART_REPOSITORY_NAME}", "${NUXEO_CHART_NAME}", "${NUXEO_CHART_VERSION}", "${NAMESPACE}", "${HELM_VALUES_DIR}/values-nuxeo.yaml~gen")
-}
-
-def helmUninstall(release, namespace) {
-  sh "helm3 uninstall ${release} --namespace=${namespace}"
-}
-
-def helmUninstallMongoDB() {
-  helmUninstall("${MONGODB_CHART_NAME}", "${NAMESPACE}")
-}
-
-def helmUninstallElasticsearch() {
-  helmUninstall("${ELASTICSEARCH_CHART_NAME}", "${NAMESPACE}")
-}
-
-def helmUninstallKafka() {
-  helmUninstall("${KAFKA_CHART_NAME}", "${NAMESPACE}")
-}
-
-def helmUninstallNuxeo() {
-  helmUninstall("${NUXEO_CHART_NAME}", "${NAMESPACE}")
-}
-
-def helmGenerateValues() {
-  sh """
-    for valuesFile in ${HELM_VALUES_DIR}/*.yaml; do
-      USAGE=${USAGE} envsubst < \$valuesFile > \$valuesFile~gen
-    done
-  """
-}
-
-def rolloutStatus(kind, name, timeout, namespace) {
-  sh """
-    kubectl rollout status ${kind} ${name} \
-      --timeout=${timeout} \
-      --namespace=${namespace}
-  """
-}
-
-def rolloutStatusMongoDB() {
-  rolloutStatus('deployment', "${MONGODB_CHART_NAME}", "${ROLLOUT_STATUS_TIMEOUT}", "${NAMESPACE}")
-}
-
-def rolloutStatusElasticsearch() {
-  rolloutStatus('statefulset', "${ELASTICSEARCH_CHART_NAME}-master", "${ROLLOUT_STATUS_TIMEOUT}", "${NAMESPACE}")
-}
-
-def rolloutStatusKafka() {
-  rolloutStatus('statefulset', "${KAFKA_CHART_NAME}", "${ROLLOUT_STATUS_TIMEOUT}", "${NAMESPACE}")
-}
-
-def rolloutStatusNuxeo() {
-  rolloutStatus('deployment', "${NUXEO_CHART_NAME}", "${ROLLOUT_STATUS_TIMEOUT}", "${NAMESPACE}")
+  nxGitHub.setStatus(repositoryUrl: env.GITHUB_STATUS_REPOSITORY_URL, commitSha: env.GITHUB_STATUS_SHA, context: context, message: message, state: state)
 }
 
 def hasUpstream() {
@@ -167,6 +61,11 @@ pipeline {
     label "jenkins-nodejs"
   }
 
+  options {
+    buildDiscarder(logRotator(daysToKeepStr: '60', numToKeepStr: '60', artifactNumToKeepStr: '5'))
+    githubProjectProperty(projectUrlStr: repositoryUrl)
+  }
+
   parameters {
     string(name: 'NUXEO_VERSION', defaultValue: '', description: 'Version of the Nuxeo server image, defaults to 2021.x.')
     string(name: 'NUXEO_REPOSITORY', defaultValue: '', description: 'GitHub repository of the nuxeo project.')
@@ -174,33 +73,12 @@ pipeline {
   }
 
   environment {
-    BITNAMI_CHART_REPOSITORY_NAME = 'bitnami'
-    // use a former version of index.yaml from the git repository as Bitnami removed all charts older than 6 months from
-    // the index.yaml descriptor, see https://github.com/bitnami/charts/issues/10539
-    BITNAMI_CHART_REPOSITORY_URL = 'https://raw.githubusercontent.com/bitnami/charts/eb5f9a9513d987b519f0ecd732e7031241c50328/bitnami'
-    ELASTIC_CHART_REPOSITORY_NAME = 'elastic'
-    ELASTIC_CHART_REPOSITORY_URL = 'https://helm.elastic.co/'
-    NUXEO_CHART_REPOSITORY_NAME = 'nuxeo'
-    NUXEO_CHART_REPOSITORY_URL = 'https://chartmuseum.platform.dev.nuxeo.com/'
-    MONGODB_CHART_NAME = 'mongodb'
-    MONGODB_CHART_VERSION = '7.14.2'
-    ELASTICSEARCH_CHART_NAME = 'elasticsearch'
-    ELASTICSEARCH_CHART_VERSION = '7.9.2'
-    KAFKA_CHART_NAME = 'kafka'
-    KAFKA_CHART_VERSION = '11.8.8'
-    NUXEO_CHART_NAME = 'nuxeo'
-    NUXEO_CHART_VERSION = '~2.0.0'
     NUXEO_DOCKER_REPOSITORY = "${isTriggered() ? DOCKER_REGISTRY : PRIVATE_DOCKER_REGISTRY}/nuxeo/nuxeo"
     NUXEO_VERSION = "${hasNuxeoVersionParameter() ? params.NUXEO_VERSION : '2021.x'}"
     NUXEO_LTS_JOB = 'nuxeo/lts/nuxeo'
-    HELM_VALUES_DIR = 'helm'
     NAMESPACE = "nuxeo-rest-api-tests-$BRANCH_NAME-$BUILD_NUMBER".toLowerCase()
-    USAGE = 'rest-api-tests'
-    ROLLOUT_STATUS_TIMEOUT = '5m'
-    SERVICE_DOMAIN = ".${NAMESPACE}.svc.cluster.local"
     GITHUB_STATUS_REPOSITORY_URL = "${isTriggeredByNuxeoPR() ? params.NUXEO_REPOSITORY : repositoryUrl}"
     GITHUB_STATUS_SHA = "${isTriggeredByNuxeoPR() ? params.NUXEO_SHA : GIT_COMMIT}"
-    SLACK_CHANNEL = 'platform-notifs'
   }
 
   stages {
@@ -208,15 +86,9 @@ pipeline {
     stage('Set labels') {
       steps {
         container('nodejs') {
-          echo """
-          ----------------------------------------
-          Set Kubernetes resource labels
-          ----------------------------------------
-          """
-          echo "Set label 'branch: ${BRANCH_NAME}' on pod ${NODE_NAME}"
-          sh """
-            kubectl label pods ${NODE_NAME} branch=${BRANCH_NAME}
-          """
+          script {
+            nxK8s.setPodLabel()
+          }
         }
       }
     }
@@ -305,58 +177,15 @@ pipeline {
             setGitHubBuildStatus('restapitests', 'Run REST API tests', 'PENDING')
           }
           container('nodejs') {
-            withEnv(["NUXEO_SERVER_URL=http://${NUXEO_CHART_NAME}${SERVICE_DOMAIN}/nuxeo"]) {
-              echo """
-              -------------------------------------------------------
-              Run REST API tests against:
-                - ${NUXEO_DOCKER_REPOSITORY}:${NUXEO_VERSION}
-                - MongoDB
-                - Elasticsearch
-                - Kafka
-              -------------------------------------------------------"""
-
-              echo 'Create test namespace'
-              sh "kubectl create namespace ${NAMESPACE}"
-
-              echo 'Copy image pull secret to test namespace'
-              sh "kubectl --namespace=platform get secret kubernetes-docker-cfg -ojsonpath='{.data.\\.dockerconfigjson}' | base64 --decode > /tmp/config.json"
-              sh """
-                kubectl create secret generic kubernetes-docker-cfg \
-                  --namespace=${NAMESPACE} \
-                  --from-file=.dockerconfigjson=/tmp/config.json \
-                  --type=kubernetes.io/dockerconfigjson --dry-run -o yaml | kubectl apply -f -
-              """
-
-              echo 'Add chart repositories'
-              helmAddBitnamiRepository()
-              helmAddElasticRepository()
-              helmAddNuxeoRepository()
-
-              echo 'Substitute environment variables in chart values'
-              helmGenerateValues()
-
-              echo 'Install external service releases'
-              helmInstallMongoDB()
-              helmInstallElasticsearch()
-              helmInstallKafka()
-              rolloutStatusMongoDB()
-              rolloutStatusElasticsearch()
-              rolloutStatusKafka()
-
-              echo 'Install nuxeo test release'
-              helmInstallNuxeo()
-              try {
-                rolloutStatusNuxeo()
-              } catch (e) {
-                sh """
-                  kubectl --namespace=${NAMESPACE} get event --sort-by .lastTimestamp
-                  kubectl --namespace=${NAMESPACE} get all,configmaps,secrets
-                  kubectl --namespace=${NAMESPACE} describe pod --selector=app=${NUXEO_CHART_NAME}
-                  kubectl --namespace=${NAMESPACE} logs --selector=app=${NUXEO_CHART_NAME} --tail=1000
-                """
-                throw e
-              }
-
+            echo """
+            -------------------------------------------------------
+            Run REST API tests against:
+              - ${NUXEO_DOCKER_REPOSITORY}:${NUXEO_VERSION}
+              - MongoDB
+              - Elasticsearch
+              - Kafka
+            -------------------------------------------------------"""
+            nxWithHelmfileDeployment(namespace: env.NAMESPACE, envVars: ["NUXEO_SERVER_URL=http://nuxeo.${NAMESPACE}.svc.cluster.local/nuxeo"]) {
               echo """
               ------------------
               Run REST API tests
@@ -367,39 +196,6 @@ pipeline {
         }
       }
       post {
-        always {
-          container('nodejs') {
-            script {
-              try {
-                // archive Nuxeo server logs
-                def nuxeoPod = sh(
-                  script: "kubectl --namespace=${NAMESPACE} get pod --selector=app=${NUXEO_CHART_NAME} --output=custom-columns=NAME:.metadata.name --no-headers",
-                  returnStdout: true
-                ).trim()
-                if (nuxeoPod) {
-                  def logFile = 'server.log'
-                  sh "kubectl cp ${NAMESPACE}/${nuxeoPod}:/var/log/nuxeo/${logFile} ${logFile}"
-                  archiveArtifacts "${logFile}"
-                } else {
-                  echo "No ${NUXEO_CHART_NAME} pod found in namespace ${NAMESPACE}. Won't archive any artifact."
-                }
-              } catch (e) {
-                echo 'An error occurred while trying to archive artifacts.'
-                throw e
-              } finally {
-                try {
-                  helmUninstallNuxeo()
-                  helmUninstallElasticsearch()
-                  helmUninstallKafka()
-                  helmUninstallMongoDB()
-                } finally {
-                  // clean up namespace
-                  sh "kubectl delete namespace ${NAMESPACE} --ignore-not-found=true"
-                }
-              }
-            }
-          }
-        }
         success {
           script {
             if (mustSetGitHubStatus()) {
@@ -425,26 +221,26 @@ pipeline {
           def upstream = hasUpstream() ? "${upstreamJobName} #${upstreamBuildNumber}" : "${NUXEO_LTS_JOB}"
           currentBuild.description = "Upstream: ${upstream}"
         }
-        if (!isTriggered() && !isPullRequest()) {
-          step([$class: 'JiraIssueUpdater', issueSelector: [$class: 'DefaultIssueSelector'], scm: scm])
+        if (!isTriggered()) {
+          nxJira.updateIssues()
         }
       }
     }
     success {
       script {
-        if (!isPullRequest() && !isTriggeredByNuxeoPR() && env.DRY_RUN != 'true') {
+        if (!nxUtils.isPullRequest() && !isTriggeredByNuxeoPR()) {
           if (!hudson.model.Result.SUCCESS.toString().equals(currentBuild.getPreviousBuild()?.getResult())) {
             def triggeredBy = isTriggered() ? ", triggered by ${upstreamJobName} #${upstreamBuildNumber}" : ''
-            slackSend(channel: "${SLACK_CHANNEL}", color: 'good', message: "Successfully built nuxeo/rest-api-compatibility-tests ${BRANCH_NAME} #${BUILD_NUMBER}${triggeredBy}: ${BUILD_URL}")
+            nxSlack.success(message: "Successfully built nuxeo/rest-api-compatibility-tests ${BRANCH_NAME} #${BUILD_NUMBER}${triggeredBy}: ${BUILD_URL}")
           }
         }
       }
     }
     unsuccessful {
       script {
-        if (!isPullRequest() && !isTriggeredByNuxeoPR() && env.DRY_RUN != 'true') {
+        if (!nxUtils.isPullRequest() && !isTriggeredByNuxeoPR()) {
           def triggeredBy = isTriggered() ? ", triggered by ${upstreamJobName} #${upstreamBuildNumber}" : ''
-          slackSend(channel: "${SLACK_CHANNEL}", color: 'danger', message: "Failed to build nuxeo/rest-api-compatibility-tests ${BRANCH_NAME} #${BUILD_NUMBER}${triggeredBy}: ${BUILD_URL}")
+          nxSlack.error(message: "Failed to build nuxeo/rest-api-compatibility-tests ${BRANCH_NAME} #${BUILD_NUMBER}${triggeredBy}: ${BUILD_URL}")
         }
       }
     }

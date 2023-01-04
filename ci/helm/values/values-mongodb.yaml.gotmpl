@@ -14,19 +14,16 @@ resources:
     cpu: "2"
     memory: "2Gi"
 labels:
-  branch: "$BRANCH_NAME"
+  {{- if (env "BRANCH_NAME") }}
+  branch: {{ env "BRANCH_NAME" | quote }}
+  {{- end }}
   resource: deployment
   team: platform
-  usage: "$USAGE"
+  usage: "rest-api-tests"
 podLabels:
-  branch: "$BRANCH_NAME"
+  {{- if (env "BRANCH_NAME") }}
+  branch: {{ env "BRANCH_NAME" | quote }}
+  {{- end }}
   resource: pod
   team: platform
-  usage: "$USAGE"
-tolerations:
-  - key: team
-    operator: Equal
-    value: platform
-    effect: NoSchedule
-nodeSelector:
-  team: platform
+  usage: "rest-api-tests"

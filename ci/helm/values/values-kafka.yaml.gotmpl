@@ -27,17 +27,12 @@ extraEnvVars:
   - name: KAFKA_CFG_STATE_LOG_REPLICATION_FACTOR
     value: "1"
 podLabels:
-  branch: "$BRANCH_NAME"
+  {{- if (env "BRANCH_NAME") }}
+  branch: {{ env "BRANCH_NAME" | quote }}
+  {{- end }}
   resource: pod
   team: platform
-  usage: "$USAGE"
-tolerations:
-  - key: team
-    operator: Equal
-    value: platform
-    effect: NoSchedule
-nodeSelector:
-  team: platform
+  usage: "rest-api-tests"
 zookeeper:
   image:
     tag: "3.6.2"
@@ -45,10 +40,12 @@ zookeeper:
   persistence:
     enabled: false
   podLabels:
-    branch: "$BRANCH_NAME"
+    {{- if (env "BRANCH_NAME") }}
+    branch: {{ env "BRANCH_NAME" | quote }}
+    {{- end }}
     resource: pod
     team: platform
-    usage: "$USAGE"
+    usage: "rest-api-tests"
   tolerations:
     - key: team
       operator: Equal
