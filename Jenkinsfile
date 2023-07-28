@@ -16,7 +16,7 @@
  * Contributors:
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
-library identifier: "platform-ci-shared-library@v0.0.11"
+library identifier: "platform-ci-shared-library@v0.0.25"
 
 repositoryUrl = 'https://github.com/nuxeo/rest-api-compatibility-tests/'
 
@@ -87,7 +87,7 @@ pipeline {
       steps {
         container('nodejs') {
           script {
-            nxK8s.setPodLabel()
+            nxK8s.setPodLabels()
           }
         }
       }
