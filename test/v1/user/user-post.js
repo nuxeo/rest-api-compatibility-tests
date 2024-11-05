@@ -36,12 +36,23 @@ t('POST /user > create user with missing username', async () => {
   expect(statusCode).toBe(400);
 });
 
+t('POST /user > create user with missing password', async () => {
+  const { statusCode } = await request.post('/user', {
+    body: DEFAULT_ENTITY,
+    properties: {
+      username: 'john',
+    },
+  });
+  expect(statusCode).toBe(400);
+});
+
 t('POST /user > create user with unexisting group', async () => {
   const { statusCode } = await request.post('/user', {
     body: {
       ...DEFAULT_ENTITY,
       properties: {
         username: 'john',
+        password: 'testPassword',
         groups: ['foo'],
       },
     },
