@@ -16,7 +16,7 @@
  * Contributors:
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
-library identifier: "platform-ci-shared-library@v0.0.38"
+library identifier: "platform-ci-shared-library@v0.0.49"
 
 repositoryUrl = 'https://github.com/nuxeo/rest-api-compatibility-tests/'
 
