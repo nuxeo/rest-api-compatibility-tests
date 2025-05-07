@@ -16,7 +16,9 @@
  * Contributors:
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
-library identifier: "platform-ci-shared-library@v0.0.49"
+import hudson.model.Result
+
+library identifier: "platform-ci-shared-library@v0.0.55"
 
 repositoryUrl = 'https://github.com/nuxeo/rest-api-compatibility-tests/'
 
@@ -228,19 +230,23 @@ pipeline {
     }
     success {
       script {
-        if (!nxUtils.isPullRequest() && !isTriggeredByNuxeoPR()) {
-          if (!hudson.model.Result.SUCCESS.toString().equals(currentBuild.getPreviousBuild()?.getResult())) {
-            def triggeredBy = isTriggered() ? ", triggered by ${upstreamJobName} #${upstreamBuildNumber}" : ''
-            nxSlack.success(message: "Successfully built nuxeo/rest-api-compatibility-tests ${BRANCH_NAME} #${BUILD_NUMBER}${triggeredBy}: ${BUILD_URL}")
-          }
+        if (!nxUtils.isPullRequest() && !isTriggeredByNuxeoPR()
+            && nxUtils.previousBuildStatusIs(status: Result.FAILURE, ignoredStatuses: [Result.ABORTED, Result.NOT_BUILT])) {
+          nxTeams.success(
+            message: "Successfully built ${currentBuild.fullProjectName}",
+            changes: true,
+          )
         }
       }
     }
     unsuccessful {
       script {
         if (!nxUtils.isPullRequest() && !isTriggeredByNuxeoPR()) {
-          def triggeredBy = isTriggered() ? ", triggered by ${upstreamJobName} #${upstreamBuildNumber}" : ''
-          nxSlack.error(message: "Failed to build nuxeo/rest-api-compatibility-tests ${BRANCH_NAME} #${BUILD_NUMBER}${triggeredBy}: ${BUILD_URL}")
+          nxTeams.error(
+            message: "Failed to build ${currentBuild.fullProjectName}",
+            changes: true,
+            culprits: true,
+          )
         }
       }
     }
