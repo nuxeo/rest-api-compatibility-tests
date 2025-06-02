@@ -18,7 +18,7 @@
  */
 import hudson.model.Result
 
-library identifier: "platform-ci-shared-library@v0.0.55"
+library identifier: "platform-ci-shared-library@v0.0.67"
 
 repositoryUrl = 'https://github.com/nuxeo/rest-api-compatibility-tests/'
 
@@ -226,27 +226,8 @@ pipeline {
         if (!isTriggered()) {
           nxJira.updateIssues()
         }
-      }
-    }
-    success {
-      script {
-        if (!nxUtils.isPullRequest() && !isTriggeredByNuxeoPR()
-            && nxUtils.previousBuildStatusIs(status: Result.FAILURE, ignoredStatuses: [Result.ABORTED, Result.NOT_BUILT])) {
-          nxTeams.success(
-            message: "Successfully built ${currentBuild.fullProjectName}",
-            changes: true,
-          )
-        }
-      }
-    }
-    unsuccessful {
-      script {
-        if (!nxUtils.isPullRequest() && !isTriggeredByNuxeoPR()) {
-          nxTeams.error(
-            message: "Failed to build ${currentBuild.fullProjectName}",
-            changes: true,
-            culprits: true,
-          )
+        if (!isTriggeredByNuxeoPR()) {
+          nxUtils.notifyBuildStatusIfNecessary()
         }
       }
     }
