@@ -16,14 +16,14 @@
  * Contributors:
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
-import hudson.model.Result
+library identifier: "platform-ci-shared-library@v0.0.68"
 
-library identifier: "platform-ci-shared-library@v0.0.67"
-
-repositoryUrl = 'https://github.com/nuxeo/rest-api-compatibility-tests/'
-
-void setGitHubBuildStatus(String context, String message, String state) {
-  nxGitHub.setStatus(repositoryUrl: env.GITHUB_STATUS_REPOSITORY_URL, commitSha: env.GITHUB_STATUS_SHA, context: context, message: message, state: state)
+def getFirstBuildCause(String className) {
+  def upstreamCauses = currentBuild.getBuildCauses(className) ?: []
+  if (!upstreamCauses.isEmpty()) {
+    return upstreamCauses[0]
+  }
+  return null
 }
 
 def hasUpstream() {
@@ -34,24 +34,21 @@ def hasNuxeoVersionParameter() {
   return params.NUXEO_VERSION?.trim()
 }
 
-def hasNuxeoGitParameters() {
-  return params.NUXEO_REPOSITORY?.trim() && params.NUXEO_SHA?.trim()
+def hasGitHubStatusParameters() {
+  return params.GITHUB_STATUS_REPOSITORY_URL?.trim() && params.GITHUB_STATUS_COMMIT_SHA?.trim()
 }
 
 def isTriggered() {
-  // rely on availability of the NUXEO_VERSION parameter to know if the build was triggered by a
-  // build of the reference branch on the upstream repository
-  return hasNuxeoVersionParameter()
+  return getFirstBuildCause('org.jenkinsci.plugins.workflow.support.steps.build.BuildUpstreamCause') != null
 }
 
 def isTriggeredByNuxeoPR() {
-  // rely on availability of the NUXEO_REPOSITORY and NUXEO_SHA parameters to know if the build was triggered by a
-  // pull request on the upstream repository
-  return hasNuxeoGitParameters()
+  def upstreamCause = getFirstBuildCause('org.jenkinsci.plugins.workflow.support.steps.build.BuildUpstreamCause')
+  return upstreamCause?.upstreamProject?.contains('PR-')
 }
 
-def mustSetGitHubStatus() {
-  return !isTriggered() || isTriggeredByNuxeoPR()
+def mustNotifyBuildStatus() {
+  return !isTriggeredByNuxeoPR() && !(env.NUXEO_VERSION ==~ /^.+PR-.+$/)
 }
 
 def upstreamJobName = hasUpstream() ? currentBuild.upstreamBuilds[0].getFullProjectName() : null
@@ -65,13 +62,13 @@ pipeline {
 
   options {
     buildDiscarder(logRotator(daysToKeepStr: '60', numToKeepStr: '60', artifactNumToKeepStr: '5'))
-    githubProjectProperty(projectUrlStr: repositoryUrl)
+    githubProjectProperty(projectUrlStr: 'https://github.com/nuxeo/rest-api-compatibility-tests/')
   }
 
   parameters {
     string(name: 'NUXEO_VERSION', defaultValue: '', description: 'Version of the Nuxeo server image, defaults to 2021.x.')
-    string(name: 'NUXEO_REPOSITORY', defaultValue: '', description: 'GitHub repository of the nuxeo project.')
-    string(name: 'NUXEO_SHA', defaultValue: '', description: 'Git commit sha of the nuxeo/lts/nuxeo upstream build.')
+    hidden(name: 'GITHUB_STATUS_REPOSITORY_URL', defaultValue: '', description: 'GitHub repository of the nuxeo project.')
+    hidden(name: 'GITHUB_STATUS_COMMIT_SHA', defaultValue: '', description: 'Git commit sha of the nuxeo/lts/nuxeo upstream build.')
   }
 
   environment {
@@ -79,8 +76,6 @@ pipeline {
     NUXEO_VERSION = "${hasNuxeoVersionParameter() ? params.NUXEO_VERSION : '2021.x'}"
     NUXEO_LTS_JOB = 'nuxeo/lts/nuxeo'
     NAMESPACE = "nuxeo-rest-api-tests-$BRANCH_NAME-$BUILD_NUMBER".toLowerCase()
-    GITHUB_STATUS_REPOSITORY_URL = "${isTriggeredByNuxeoPR() ? params.NUXEO_REPOSITORY : repositoryUrl}"
-    GITHUB_STATUS_SHA = "${isTriggeredByNuxeoPR() ? params.NUXEO_SHA : GIT_COMMIT}"
   }
 
   stages {
@@ -123,10 +118,10 @@ pipeline {
             Not triggered by an upstream job.
             """
           }
-          if (mustSetGitHubStatus()) {
+          if (hasGitHubStatusParameters()) {
             buildInfo += """
-            GITHUB_STATUS_REPOSITORY_URL: ${GITHUB_STATUS_REPOSITORY_URL}
-            GITHUB_STATUS_SHA: ${GITHUB_STATUS_SHA}
+            GITHUB_STATUS_REPOSITORY_URL: ${params.GITHUB_STATUS_REPOSITORY_URL}
+            GITHUB_STATUS_COMMIT_SHA: ${params.GITHUB_STATUS_COMMIT_SHA}
             """
           }
           echo buildInfo
@@ -139,7 +134,7 @@ pipeline {
       steps {
         script {
           if (!isTriggered()) {
-            setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'PENDING')
+            nxGitHub.setStatus(context: 'yarn/eslint', message: 'Install Yarn dependencies and run ESLint', state: 'PENDING')
           }
           container('nodejs') {
             echo """
@@ -157,14 +152,14 @@ pipeline {
         success {
           script {
             if (!isTriggered()) {
-              setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'SUCCESS')
+              nxGitHub.setStatus(context: 'yarn/eslint', message: 'Install Yarn dependencies and run ESLint', state: 'SUCCESS')
             }
           }
         }
         failure {
           script {
             if (!isTriggered()) {
-              setGitHubBuildStatus('yarn/eslint', 'Install Yarn dependencies and run ESLint', 'FAILURE')
+              nxGitHub.setStatus(context: 'yarn/eslint', message: 'Install Yarn dependencies and run ESLint', state: 'FAILURE')
             }
           }
         }
@@ -172,43 +167,25 @@ pipeline {
     }
 
     stage('Run REST API tests') {
-      // set GitHub status checks on the REST API tests repository or on the nuxeo repository when triggered by a pull request
       steps {
         script {
-          if (mustSetGitHubStatus()) {
-            setGitHubBuildStatus('restapitests', 'Run REST API tests', 'PENDING')
-          }
-          container('nodejs') {
-            echo """
-            -------------------------------------------------------
-            Run REST API tests against:
-              - ${NUXEO_DOCKER_REPOSITORY}:${NUXEO_VERSION}
-              - MongoDB
-              - Elasticsearch
-              - Kafka
-            -------------------------------------------------------"""
-            nxWithHelmfileDeployment(namespace: env.NAMESPACE, envVars: ["NUXEO_SERVER_URL=http://nuxeo.${NAMESPACE}.svc.cluster.local/nuxeo"]) {
+          nxWithGitHubStatus(context: 'restapitests', message: 'Run REST API tests', state: 'PENDING') {
+            container('nodejs') {
               echo """
-              ------------------
-              Run REST API tests
-              ------------------"""
-              sh 'yarn test'
-            }
-          }
-        }
-      }
-      post {
-        success {
-          script {
-            if (mustSetGitHubStatus()) {
-              setGitHubBuildStatus('restapitests', 'Run REST API tests', 'SUCCESS')
-            }
-          }
-        }
-        failure {
-          script {
-            if (mustSetGitHubStatus()) {
-              setGitHubBuildStatus('restapitests', 'Run REST API tests', 'FAILURE')
+              -------------------------------------------------------
+              Run REST API tests against:
+                - ${NUXEO_DOCKER_REPOSITORY}:${NUXEO_VERSION}
+                - MongoDB
+                - Elasticsearch
+                - Kafka
+              -------------------------------------------------------"""
+              nxWithHelmfileDeployment(namespace: env.NAMESPACE, envVars: ["NUXEO_SERVER_URL=http://nuxeo.${NAMESPACE}.svc.cluster.local/nuxeo"]) {
+                echo """
+                ------------------
+                Run REST API tests
+                ------------------"""
+                sh 'yarn test'
+              }
             }
           }
         }
@@ -226,7 +203,7 @@ pipeline {
         if (!isTriggered()) {
           nxJira.updateIssues()
         }
-        if (!isTriggeredByNuxeoPR()) {
+        if (mustNotifyBuildStatus()) {
           nxUtils.notifyBuildStatusIfNecessary()
         }
       }
