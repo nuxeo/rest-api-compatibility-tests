@@ -73,7 +73,7 @@ pipeline {
 
   environment {
     NUXEO_DOCKER_REPOSITORY = "${isTriggered() ? DOCKER_REGISTRY : PRIVATE_DOCKER_REGISTRY}/nuxeo/nuxeo"
-    NUXEO_VERSION = "${hasNuxeoVersionParameter() ? params.NUXEO_VERSION : '2021.x'}"
+    NUXEO_VERSION = "${hasNuxeoVersionParameter() ? params.NUXEO_VERSION : '2023.x'}"
     NUXEO_LTS_JOB = 'nuxeo/lts/nuxeo'
     NAMESPACE = "nuxeo-rest-api-tests-$BRANCH_NAME-$BUILD_NUMBER".toLowerCase()
   }
