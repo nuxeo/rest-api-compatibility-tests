@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ * (C) Copyright 2020-2025 Nuxeo (http://nuxeo.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  * Contributors:
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
-library identifier: "platform-ci-shared-library@v0.0.69"
+library identifier: "platform-ci-shared-library@v0.0.71"
 
 def getFirstBuildCause(String className) {
   def upstreamCauses = currentBuild.getBuildCauses(className) ?: []
@@ -169,6 +169,7 @@ pipeline {
     stage('Run REST API tests') {
       steps {
         script {
+          def nuxeoHelmfileRef = nxDocker.getLabel(image: "${NUXEO_DOCKER_REPOSITORY}:${NUXEO_VERSION}", label: 'org.nuxeo.scm-ref')
           nxWithGitHubStatus(context: 'restapitests', message: 'Run REST API tests', state: 'PENDING') {
             container('nodejs') {
               echo """
@@ -179,7 +180,11 @@ pipeline {
                 - Elasticsearch
                 - Kafka
               -------------------------------------------------------"""
-              nxWithHelmfileDeployment(namespace: env.NAMESPACE, envVars: ["NUXEO_SERVER_URL=http://nuxeo.${NAMESPACE}.svc.cluster.local/nuxeo"]) {
+              nxWithHelmfileDeployment(namespace: env.NAMESPACE, envVars: [
+                "NUXEO_HELMFILE_REF=${nuxeoHelmfileRef}",
+                "NUXEO_SERVER_URL=http://nuxeo.${NAMESPACE}.svc.cluster.local/nuxeo",
+                "VERSION=dummy_because_use_in_nuxeo-lts",
+              ]) {
                 echo """
                 ------------------
                 Run REST API tests

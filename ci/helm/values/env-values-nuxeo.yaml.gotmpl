@@ -1,0 +1,5 @@
+nuxeo:
+  image:
+    repository: {{ env "NUXEO_DOCKER_REPOSITORY" | quote }}
+    tag: {{ env "NUXEO_VERSION" | quote }}
+    pullPolicy: Always
