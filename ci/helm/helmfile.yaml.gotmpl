@@ -1,0 +1,17 @@
+environments:
+  default:
+    values:
+    - environments/rest-api-tests-default.yaml
+values: # values for all environments and helmfiles
+- git::https://{{ requiredEnv "GITHUB_USER" }}:{{ requiredEnv "GITHUB_PASSWORD" }}@github.com/nuxeo/nuxeo-lts.git@ci/helm/apps/base/values/env-values-global.yaml.gotmpl?ref={{ requiredEnv "NUXEO_HELMFILE_REF" }}
+- values/env-values-global.yaml
+- values/env-values-nuxeo.yaml.gotmpl
+---
+helmDefaults:
+  timeout: 600
+  wait: true
+
+helmfiles:
+- path: git::https://{{ requiredEnv "GITHUB_USER" }}:{{ requiredEnv "GITHUB_PASSWORD" }}@github.com/nuxeo/nuxeo-lts.git@ci/helm/apps/helmfile-base.yaml.gotmpl?ref={{ requiredEnv "NUXEO_HELMFILE_REF" }}
+  values:
+  - {{ toYaml .Values | nindent 4 }}

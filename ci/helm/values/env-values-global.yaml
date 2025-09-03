@@ -1,0 +1,4 @@
+global:
+  labels:
+    dev.nuxeo.com/repository: rest-api-compatibility-tests
+    dev.nuxeo.com/usage: rest-api-tests
