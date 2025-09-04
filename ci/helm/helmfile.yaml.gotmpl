@@ -1,7 +1,7 @@
 environments:
   default:
     values:
-    - environments/rest-api-tests-default.yaml
+    - environments/default.yaml
 values: # values for all environments and helmfiles
 - git::https://{{ requiredEnv "GITHUB_USER" }}:{{ requiredEnv "GITHUB_PASSWORD" }}@github.com/nuxeo/nuxeo-lts.git@ci/helm/apps/base/values/env-values-global.yaml.gotmpl?ref={{ requiredEnv "NUXEO_HELMFILE_REF" }}
 - values/env-values-global.yaml
