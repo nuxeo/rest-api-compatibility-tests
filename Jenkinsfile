@@ -183,7 +183,6 @@ pipeline {
               nxWithHelmfileDeployment(namespace: env.NAMESPACE, envVars: [
                 "NUXEO_HELMFILE_REF=${nuxeoHelmfileRef}",
                 "NUXEO_SERVER_URL=http://nuxeo.${NAMESPACE}.svc.cluster.local/nuxeo",
-                "VERSION=dummy_because_use_in_nuxeo-lts",
               ]) {
                 echo """
                 ------------------
