@@ -3,7 +3,7 @@ environments:
     values:
     - environments/default.yaml
 values: # values for all environments and helmfiles
-- git::https://{{ requiredEnv "GITHUB_USER" }}:{{ requiredEnv "GITHUB_PASSWORD" }}@github.com/nuxeo/nuxeo-lts.git@ci/helm/apps/base/values/env-values-global.yaml.gotmpl?ref={{ requiredEnv "NUXEO_HELMFILE_REF" }}
+- git::https://{{ requiredEnv "GITHUB_USER" }}:{{ requiredEnv "GITHUB_PASSWORD" }}@github.com/nuxeo/nuxeo-lts.git@ci/helm/apps/base/values/env-values-global.yaml.gotmpl?ref=feat-NXBT-3894-helmfile-composition-2025&depth=1
 - values/env-values-global.yaml
 - values/env-values-nuxeo.yaml.gotmpl
 ---
@@ -12,6 +12,6 @@ helmDefaults:
   wait: true
 
 helmfiles:
-- path: git::https://{{ requiredEnv "GITHUB_USER" }}:{{ requiredEnv "GITHUB_PASSWORD" }}@github.com/nuxeo/nuxeo-lts.git@ci/helm/apps/helmfile-base.yaml.gotmpl?ref={{ requiredEnv "NUXEO_HELMFILE_REF" }}
+- path: git::https://{{ requiredEnv "GITHUB_USER" }}:{{ requiredEnv "GITHUB_PASSWORD" }}@github.com/nuxeo/nuxeo-lts.git@ci/helm/apps/helmfile-base.yaml.gotmpl?ref=feat-NXBT-3894-helmfile-composition-2025&depth=1
   values:
   - {{ toYaml .Values | nindent 4 }}
