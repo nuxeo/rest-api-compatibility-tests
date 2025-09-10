@@ -16,7 +16,7 @@
  * Contributors:
  *     Antoine Taillefer <ataillefer@nuxeo.com>
  */
-library identifier: "platform-ci-shared-library@v0.0.71"
+library identifier: "platform-ci-shared-library@v0.0.72"
 
 def getFirstBuildCause(String className) {
   def upstreamCauses = currentBuild.getBuildCauses(className) ?: []
@@ -209,7 +209,24 @@ pipeline {
           nxJira.updateIssues()
         }
         if (mustNotifyBuildStatus()) {
-          nxUtils.notifyBuildStatusIfNecessary()
+          nxUtils.callIfBuildRecoverOrFail(
+            success: {
+              nxTeams.success(
+                message: "Successfully built ${currentBuild.fullProjectName}",
+                changes: true,
+              )},
+            error: {
+              nxTeams.error(
+                message: "Failed to build ${currentBuild.fullProjectName}",
+                changes: true,
+                culprits: true,
+              )},
+            buildGroupComputer: {
+              build ->
+                def versionParameter = nxBuildWrapper(build).getParameterValue("NUXEO_VERSION") ?: '2023'
+                return nxUtils.getMajorVersion(version: versionParameter)
+            }
+          )
         }
       }
     }
