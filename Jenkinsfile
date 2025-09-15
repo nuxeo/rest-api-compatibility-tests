@@ -222,7 +222,7 @@ pipeline {
               )},
             buildGroupComputer: {
               build ->
-                def versionParameter = nxBuildWrapper(build).getParameterValue("NUXEO_VERSION") ?: '2023'
+                def versionParameter = nxBuildWrapper(build).getParameterValue("NUXEO_VERSION") ?: '2023.0'
                 return nxUtils.getMajorVersion(version: versionParameter)
             }
           )
