@@ -10,7 +10,6 @@
   },
   "entity-type": "user",
   "extendedGroups": [],
-  "id": "jack",
   "isAdministrator": false,
   "isAnonymous": false,
   "properties": {

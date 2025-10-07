@@ -8,7 +8,6 @@
       "entity-type": "group",
       "grouplabel": "Administrators group",
       "groupname": "administrators",
-      "id": "administrators",
       "properties": {
         "description": "Group of users with adminstrative rights",
         "grouplabel": "Administrators group",
@@ -20,7 +19,6 @@
       "entity-type": "group",
       "grouplabel": "Group 1",
       "groupname": "group1",
-      "id": "group1",
       "properties": {
         "description": "The group 1",
         "grouplabel": "Group 1",
@@ -32,7 +30,6 @@
       "entity-type": "group",
       "grouplabel": "Members group",
       "groupname": "members",
-      "id": "members",
       "properties": {
         "description": "Group of users with read access rights",
         "grouplabel": "Members group",
@@ -44,7 +41,6 @@
       "entity-type": "group",
       "grouplabel": "Power users group",
       "groupname": "powerusers",
-      "id": "powerusers",
       "properties": {
         "description": "Group of users with limited administrative rights",
         "grouplabel": "Power users group",
