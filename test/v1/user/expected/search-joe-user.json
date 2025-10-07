@@ -7,7 +7,6 @@
     {
       "entity-type": "user",
       "extendedGroups": [],
-      "id": "joe",
       "isAdministrator": false,
       "isAnonymous": false,
       "properties": {
