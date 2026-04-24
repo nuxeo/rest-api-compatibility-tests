@@ -2,11 +2,10 @@
 
 [![Jenkins](https://jenkins.platform.dev.nuxeo.com/buildStatus/icon?job=nuxeo/rest-api-compatibility-tests/master)](https://jenkins.platform.dev.nuxeo.com/job/nuxeo/job/rest-api-compatibility-tests/job/master)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
-[![Dependency Status](https://img.shields.io/david/nuxeo/rest-api-compatibility-tests.svg?style=flat-square)](https://david-dm.org/nuxeo/rest-api-compatibility-tests) [![devDependency Status](https://img.shields.io/david/dev/nuxeo/rest-api-compatibility-tests.svg?style=flat-square)](https://david-dm.org/nuxeo/rest-api-compatibility-tests#info=devDependencies)
 
 ## Purpose
 
-This project allows to validate the REST API versions that are supported in the [2021 branch](https://github.com/nuxeo/nuxeo-lts) of the Nuxeo Platform.
+This project allows to validate the REST API versions that are supported in the [Nuxeo Platform](https://github.com/nuxeo/nuxeo-lts).
 
 For each REST API version, we need to guarantee the following assertion:
 
@@ -25,6 +24,10 @@ Calling the REST API version 1 must work exactly the same as on server 1.0 and s
 
 Clients must be able to call the REST API version 1 or 2 on server 2.0.
 
+## Requirements
+
+- [Node.js](https://nodejs.org/) 24+
+
 ## Tests
 
 The goal is to provide a complete test coverage of HTTP requests for each supported REST API version. This includes:
@@ -37,44 +40,28 @@ The goal is to provide a complete test coverage of HTTP requests for each suppor
 To install the project's dependencies:
 
 ```shell
-yarn
+npm install
 ```
 
 To run the tests, make sure that a Nuxeo server is up and available at `http://localhost:8080/nuxeo`, or the value of the `NUXEO_SERVER_URL` environment variable, then run:
 
 ```shell
-yarn test
+npm test
 ```
 
 To run a specific test:
 
 ```shell
-yarn test --runTestsByPath test/v1/user/user-post.js
+npx vitest run test/v1/user/user-post.js
 ```
 
 To run a set of tests matching a given pattern:
 
 ```shell
-yarn test user-post
+npx vitest run user-post
 ```
 
-To display the debug information of the `request` module while running the tests:
-
-```shell
-NODE_DEBUG=request yarn test
-```
-
-To debug the tests in VS Code, just start the **Debug Jest Tests** debug configuration.
-
-Then, to debug some specific tests, you can use these options in [launch.json](.vscode/launch.json):
-
-```json
-"runtimeArgs": [
-  ...
-  "--testPathPattern=user-post",
-  "--testNamePattern=unauthorized"
-],
-```
+To debug the tests in VS Code, just start the **Debug Vitest Tests** debug configuration.
 
 ## Structure
 
@@ -93,28 +80,29 @@ test/v1/...
 To check linting with ESLint and code style with Prettier:
 
 ```shell
-yarn lint
+npm run lint
 ```
 
 To format with Prettier:
 
 ```shell
-yarn format
+npm run format
 ```
 
 ## CI/CD
 
 This set of tests is executed in a [multibranch pipeline](https://jenkins.platform.dev.nuxeo.com/job/nuxeo/job/rest-api-compatibility-tests/) against a Nuxeo server configured as following:
 
-- Docker image: `docker-private.packages.nuxeo.com/nuxeo/nuxeo:2021.x`
+- Docker image: `docker-private.packages.nuxeo.com/nuxeo/nuxeo:2023.x`
 - MongoDB
 - Elasticsearch
+- Kafka
 
 The build fails if at least one test fails.
 
 This job is also triggered by the [nuxeo/lts/nuxeo](https://jenkins.platform.dev.nuxeo.com/job/nuxeo/job/lts/job/nuxeo/) multibranch pipeline:
 
 - On pull requests, to run the REST API tests against the Nuxeo image freshly built from the related branch, and set a GitHub status check on the pull request.
-- On the `2021` branch, to run the REST API tests against the `docker-private.packages.nuxeo.com/nuxeo/nuxeo:2021.x` image freshly built from the `2021` branch.
+- On the main branch, to run the REST API tests against the latest Nuxeo image.
 
 This adds a quality gate for the continuous delivery of the Nuxeo server.

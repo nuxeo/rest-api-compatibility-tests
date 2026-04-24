@@ -129,22 +129,22 @@ pipeline {
       }
     }
 
-    stage('Yarn/ESLint') {
+    stage('npm/ESLint') {
       // set GitHub status check only on the REST API tests repository, not on the nuxeo repository when triggered
       steps {
         script {
           if (!isTriggered()) {
-            nxGitHub.setStatus(context: 'yarn/eslint', message: 'Install Yarn dependencies and run ESLint', state: 'PENDING')
+            nxGitHub.setStatus(context: 'npm/eslint', message: 'Install npm dependencies and run ESLint', state: 'PENDING')
           }
           container('nodejs') {
             echo """
             ----------------------------------------
-            Install Yarn dependencies and run ESLint
+            Install npm dependencies and run ESLint
             ----------------------------------------"""
             def nodeVersion = sh(script: 'node -v', returnStdout: true).trim()
             echo "node version: ${nodeVersion}"
-            sh 'yarn'
-            sh 'yarn lint'
+            sh 'npm ci'
+            sh 'npm run lint'
           }
         }
       }
@@ -152,14 +152,14 @@ pipeline {
         success {
           script {
             if (!isTriggered()) {
-              nxGitHub.setStatus(context: 'yarn/eslint', message: 'Install Yarn dependencies and run ESLint', state: 'SUCCESS')
+              nxGitHub.setStatus(context: 'npm/eslint', message: 'Install npm dependencies and run ESLint', state: 'SUCCESS')
             }
           }
         }
         failure {
           script {
             if (!isTriggered()) {
-              nxGitHub.setStatus(context: 'yarn/eslint', message: 'Install Yarn dependencies and run ESLint', state: 'FAILURE')
+              nxGitHub.setStatus(context: 'npm/eslint', message: 'Install npm dependencies and run ESLint', state: 'FAILURE')
             }
           }
         }
@@ -188,7 +188,7 @@ pipeline {
                 ------------------
                 Run REST API tests
                 ------------------"""
-                sh 'yarn test'
+                sh 'npm test'
               }
             }
           }

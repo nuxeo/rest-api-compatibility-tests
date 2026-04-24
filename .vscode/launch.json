@@ -2,14 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug Jest Tests",
+      "name": "Debug Vitest Tests",
       "type": "node",
       "request": "launch",
       "runtimeArgs": [
         "--inspect-brk",
-        "${workspaceRoot}/node_modules/.bin/jest",
-        "--runInBand",
-        "--verbose"
+        "${workspaceRoot}/node_modules/vitest/vitest.mjs",
+        "run",
+        "--no-file-parallelism"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
