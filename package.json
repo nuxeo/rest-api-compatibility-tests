@@ -11,7 +11,7 @@
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-prettier": "^5.5.7",
     "globals": "^16.0.0",
-    "prettier": "^3.9.10",
+    "prettier": "^3.10.1",
     "vitest": "^4.1.12"
   },
   "scripts": {
